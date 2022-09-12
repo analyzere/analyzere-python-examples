@@ -1,6 +1,6 @@
+from datetime import timezone
 import dateutil
 import pandas as pd
-import pytz
 import sys
 
 from analyzere import MonetaryUnit, Reinstatement
@@ -14,7 +14,7 @@ class LayerParser:
         if value:
             try:
                 date_str = dateutil.parser.parse(value, ignoretz=True)
-                parsed_date = date_str.replace(tzinfo=pytz.UTC)
+                parsed_date = date_str.replace(tzinfo=timezone.utc)
             except (ValueError, TypeError) as e:
                 raise Exception('Unrecognized {} date: {}'.format(layer_term, value))
         return parsed_date
