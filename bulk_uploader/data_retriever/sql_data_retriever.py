@@ -8,6 +8,9 @@ class SQLDataRetriever:
     and loads it in a DataFrame.
     
     """
+    @classmethod
+    def add_parser_arguments(cls, parser):
+        pass
 
     def establish_connection(self):
         validation = self.sql_config.validation
@@ -83,7 +86,7 @@ class SQLDataRetriever:
         except Exception as e:
             sys.exit('Error while retrieving data from database: {}'.format(e))
 
-    def __init__(self, config_parser):
-        self.config_parser = config_parser
-        self.sql_config = self.config_parser.get_sql_config()
+    def __init__(self, args, config):
+        self.config = config
+        self.sql_config = self.config.get_sql_config()
         self.connection = None

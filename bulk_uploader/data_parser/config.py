@@ -1,7 +1,11 @@
+import configparser
+import logging
 from collections import namedtuple
+from pathlib import Path
 
+LOG = logging.getLogger()
 
-class ConfigFileParser:
+class ConfigFile:
     """
     This class parses the sections of config file and returns a namedtuple object that 
     represents the section and its members. 
@@ -52,6 +56,10 @@ class ConfigFileParser:
 
         return sql_config_values
 
-    def __init__(self, config):
-        self.config = config
+    def __init__(self, filename):
+        if not Path(filename).is_file():
+            LOG.error(f"Configuration file {filename} does not exist or is not a file.")
+            raise ValueError(f"Configuration file not found.")
+        self.config = configparser.ConfigParser()
+        self.config.read(filename)
         self.sections = self.config.sections()
