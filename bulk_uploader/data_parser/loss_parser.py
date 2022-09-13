@@ -1,5 +1,4 @@
-import sys
-from collections import Counter
+from collections import namedtuple
 
 
 class LossParser:
@@ -33,59 +32,84 @@ class LossParser:
         """
         Check if the required columns are present in the Loss DataFrame.
         """
-        column_names = self.get_column_names(self.bulk_loss_set_columns)
+        required_columns = set(
+            self.get_column_names(self.bulk_loss_set_columns)
+        )
+        provided_columns = set(self.loss_df.columns)
     
-        assert (set(column_names).issubset(set(list(self.loss_df.columns)))), \
-            "Required columns are not found in the Bulk Loss input: {}".format(column_names)
-
-        self.loss_df = self.loss_df[column_names]
+        # Check whether all required columns are included.
+        if not required_columns.issubset(provided_columns):
+            raise ValueError(
+                "Not all required required columns are found "
+                "in the input loss data."
+            )
+        
+        # Create a new view of the DataFrame only containing the required
+        # columns.
+        self.loss_df = self.loss_df[list(required_columns)]
 
     def check_loss_content(self):
         """
         Validate the content of Loss DataFrame.
         """
-        assert(len(self.loss_df) > 0), 'Bulk Loss input has no content'
+        if not len(self.loss_df):
+            raise ValueError("Input loss file contains no losses.")
 
         if self.loss_df.isnull().values.any():
-            raise Exception('Bulk Loss input has empty values for some columns')
+            raise ValueError(
+                "Input loss file has empty values for some columns."
+            )
 
     def modify_column_names(self):
         """
         Modify the Loss DataFrame columm names to align with Analyze Re 
         Loss columns expectations
         """
-        are_loss_columns = self.get_column_names(self.ARe_loss_columns)
-        input_loss_column_names = self.get_column_names(self.bulk_loss_set_columns)
 
-        column_mapper = {}  # {input_column: ARe_column}
-        for input_column, are_column in zip(input_loss_column_names, are_loss_columns):
-            column_mapper[input_column] = are_column
+        # These are the column names required by Analyze Re
+        are_target_columns = namedtuple(
+            "TargetColumns", 
+            [
+                "loss_set_id", "event_id", "loss", "trial_id", "sequence",
+                "reinstatement_premium", "reinstatement_brokerage"
+            ]
+        )._make(
+            [
+                "LayerId", 
+                "EventId", 
+                "Loss", 
+                "Trial", 
+                "Sequence", 
+                "ReinstatementPremium", 
+                "ReinstatementBrokerage"
+            ]
+        )
+
+        # We'll create a mapping from the source column name to the
+        # corresponding Analyze Re column name. get_column_names enforces a
+        # specific order of the column names, so zip() works here.
+        column_mapper=dict(
+            (src, dst)
+            for src, dst in zip(
+                self.get_column_names(self.bulk_loss_set_columns),
+                self.get_column_names(are_target_columns)
+            )
+        )
 
         # Replace the column names in the loss dataframe
         self.loss_df = self.loss_df.rename(columns=column_mapper)
 
-    def process_loss_df(self):
-        try:
-            print('Parsing bulk loss content')
-            self.check_required_columns()
-            self.check_loss_content()
-            self.modify_column_names()
-
-        except Exception as e:
-            sys.exit('Error while parsing bulk loss content: {}'.format(e))
-
     def parse_loss_df(self):
         # Get the input loss column names from config
-        self.bulk_loss_set_columns = self.config_parser.get_loss_set_columns()
+        self.bulk_loss_set_columns = self.config.loss_set_columns
 
-        # Get the ARe expected column names from config
-        self.ARe_loss_columns = self.config_parser.get_ARe_loss_set_columns()
-
-        self.process_loss_df()
+        self.check_required_columns()
+        self.check_loss_content()
+        self.modify_column_names()
 
         return self.loss_df
 
-    def __init__(self, loss_df, loss_type, config_parser):
+    def __init__(self, loss_df, loss_type, config):
         self.loss_df = loss_df
         self.loss_type = loss_type.lower()
-        self.config_parser = config_parser
+        self.config = config

@@ -86,7 +86,7 @@ class LayerParser:
 
         # If the field is a limit, and the value in the row is zero, we assume
         # "unlimited"
-        if self.layer_term_columns.limit in field and str(value).lower() in ['unlimited']:
+        if self.layer_columns.limit in field and str(value).lower() in ['unlimited']:
             value = sys.float_info.max
         else:
             value = self._get_value_as(field, row, 'float')
@@ -97,8 +97,8 @@ class LayerParser:
         # Get the 'currency' for the MonetaryUnit.
         ccy = None
         # Check if currency exist in the dataframe
-        if self.layer_term_columns.currency in self.layer_df.columns:
-            ccy = self._get_value(self.layer_term_columns.currency, row)
+        if self.layer_columns.currency in self.layer_df.columns:
+            ccy = self._get_value(self.layer_columns.currency, row)
         else:
             ccy_field = '{}_ccy'.format(field)
             if ccy_field in self.layer_df.columns:
@@ -109,7 +109,7 @@ class LayerParser:
         return MonetaryUnit(value, ccy)
 
     def _get_participation(self, row):
-        participation = self._get_value_as(self.layer_term_columns.participation,
+        participation = self._get_value_as(self.layer_columns.participation,
                                            row,
                                            'float')
 
@@ -264,27 +264,27 @@ class LayerParser:
         # Option 1: Count + Premium [+ Brokerage]
         # If 'Reinstatement Count' is proivded, it *must* be accompanied by
         # at least a 'Reinstatement Premium' column
-        if self.layer_term_columns.reinstatement_count in self.layer_df.columns:
-            if self.layer_term_columns.reinstatement_premium not in self.layer_df.columns:
+        if self.layer_columns.reinstatement_count in self.layer_df.columns:
+            if self.layer_columns.reinstatement_premium not in self.layer_df.columns:
                 raise Exception(
                     'A "Reinstatement Premium" column is required '
                     'when a "Reinstatement Count" field is provided')
 
             # Option 1: Count + Premium [+ Brokerage]
             # Ensure all fields are float values (not strings)
-            reinstatement_count = self._get_value_as(self.layer_term_columns.reinstatement_count,
+            reinstatement_count = self._get_value_as(self.layer_columns.reinstatement_count,
                                                      row,
                                                      'int')
 
-            reinstatement_premium = self._get_value_as(self.layer_term_columns.reinstatement_premium,
+            reinstatement_premium = self._get_value_as(self.layer_columns.reinstatement_premium,
                                                        row,
                                                        'float')
             if reinstatement_premium < 0.0:
                 raise Exception('Negative Reinstatement Premium provided: '
                                 '{}'.format(reinstatement_premium))
 
-            if self.layer_term_columns.reinstatement_brokerage in self.layer_df.columns:
-                reinstatement_brokerage = self._get_value_as(self.layer_term_columns.reinstatement_brokerage,
+            if self.layer_columns.reinstatement_brokerage in self.layer_df.columns:
+                reinstatement_brokerage = self._get_value_as(self.layer_columns.reinstatement_brokerage,
                                                              row,
                                                              'float')
                 if reinstatement_brokerage < 0.0:
@@ -298,9 +298,9 @@ class LayerParser:
                                   brokerage=reinstatement_brokerage))
 
         # Option 2: Values in double-delimited string
-        elif self.layer_term_columns.reinstatements in self.layer_df.columns:
+        elif self.layer_columns.reinstatements in self.layer_df.columns:
             provided_reinstatements = self._parse_reinstatement_string(
-                self._get_value(self.layer_term_columns.reinstatements, row))
+                self._get_value(self.layer_columns.reinstatements, row))
 
         # Return the list of Reinstatements
         return provided_reinstatements
@@ -312,19 +312,19 @@ class LayerParser:
         parsed_value = None
         if layer_term in self.layer_df.columns:
             # Parse participation
-            if layer_term == self.layer_term_columns.participation:
+            if layer_term == self.layer_columns.participation:
                 parsed_value = self._get_participation(row)
 
             # Parse inception and expiry
-            elif (layer_term == self.layer_term_columns.inception) or \
-                    (layer_term == self.layer_term_columns.expiry):
+            elif (layer_term == self.layer_columns.inception) or \
+                    (layer_term == self.layer_columns.expiry):
                 parsed_value = self._parse_date(row, layer_term)
 
             # Parse reinstatements
-            elif (layer_term == self.layer_term_columns.reinstatements) or \
-                    (layer_term == self.layer_term_columns.reinstatement_count):
-                agg_limit = self._get_value_as(self.layer_term_columns.aggregate_limit, row, 'float')
-                occ_limit = self._get_value_as(self.layer_term_columns.limit, row, 'float')
+            elif (layer_term == self.layer_columns.reinstatements) or \
+                    (layer_term == self.layer_columns.reinstatement_count):
+                agg_limit = self._get_value_as(self.layer_columns.aggregate_limit, row, 'float')
+                occ_limit = self._get_value_as(self.layer_columns.limit, row, 'float')
 
                 parsed_value = self._parse_reinstatements(row, agg_limit, occ_limit)
 
@@ -334,9 +334,9 @@ class LayerParser:
             self.update_layer_record(row, layer_term, parsed_value, index)
 
     def process_loss_metadata(self, row, index):
-        if self.layer_term_columns.loss_set_start_date in self.layer_df.columns:
-            parsed_value = self._parse_date(row, self.layer_term_columns.loss_set_start_date)
-            self.update_layer_record(row, self.layer_term_columns.loss_set_start_date, parsed_value, index)
+        if self.layer_columns.loss_set_start_date in self.layer_df.columns:
+            parsed_value = self._parse_date(row, self.layer_columns.loss_set_start_date)
+            self.update_layer_record(row, self.layer_columns.loss_set_start_date, parsed_value, index)
 
     def process_layer_metadata(self, row, index):
         # Pickup columns that are neither financial layer terms, nor non-financial layer terms
@@ -349,21 +349,21 @@ class LayerParser:
             if pd.isna(value):
                 value = ''
             meta_data[col] = value
-        self.update_layer_record(row, self.layer_term_columns.meta_data, meta_data, index)
+        self.update_layer_record(row, self.layer_columns.meta_data, meta_data, index)
 
     def process_layer_record(self):
         self.non_financial_layer_terms = [
-            self.layer_term_columns.layer_id,
-            self.layer_term_columns.loss_set_id,
-            self.layer_term_columns.loss_set_currency,
-            self.layer_term_columns.loss_set_start_date,
-            self.layer_term_columns.layer_type,
-            self.layer_term_columns.description,
-            self.layer_term_columns.meta_data,
-            self.layer_term_columns.currency
+            self.layer_columns.layer_id,
+            self.layer_columns.loss_set_id,
+            self.layer_columns.loss_set_currency,
+            self.layer_columns.loss_set_start_date,
+            self.layer_columns.layer_type,
+            self.layer_columns.description,
+            self.layer_columns.meta_data,
+            self.layer_columns.currency
         ]
 
-        self.financial_layer_terms = list(filter(None, list(set(self.layer_term_columns._asdict().values())
+        self.financial_layer_terms = list(filter(None, list(set(self.layer_columns._asdict().values())
                                           - set(self.non_financial_layer_terms))))
 
         self.layer_df['meta_data'] = self.layer_df.apply(lambda x: {})
@@ -380,27 +380,23 @@ class LayerParser:
 
     def validate_layer_file(self):
         assert (len(self.layer_df) > 0), 'Bulk Layer input has no content'
-        if not self.layer_term_columns.layer_id in self.layer_df.columns:
+        if not self.layer_columns.layer_id in self.layer_df.columns:
             raise Exception('{} not found in Bulk Layer input'.format
-                            (self.layer_term_columns.layer_id))
+                            (self.layer_columns.layer_id))
 
     def parse_layer_df(self):
-        try:
-            print('Parsing bulk layer content')
-            self.layer_term_columns = self.config_parser.get_layer_term_columns()
-            self.defaults = self.config_parser.get_defaults()
+        self.layer_columns = self.config.layer_columns
+        self.defaults = self.config.defaults
 
-            self.validate_layer_file()
-            self.process_layer_record()
+        self.validate_layer_file()
+        self.process_layer_record()
 
-            return self.layer_df
+        return self.layer_df
 
-        except Exception as e:
-            sys.exit('Error while parsing layer contents: {}'.format(e))
-
-    def __init__(self, layer_df, config_parser):
+        
+    def __init__(self, layer_df, config):
         self.layer_df = layer_df
-        self.config_parser = config_parser
+        self.config = config
         self._reinstatement_str_separators = ['~', '!', '@', '#', '$', '%',
                                               '^', '&', '*', '_', '+',
                                               '=', '|', ';', ':', '/']

@@ -1,8 +1,4 @@
 import argparse
-
-import os
-import sys
-
 import logging
 import logging.config
 
@@ -10,7 +6,7 @@ import analyzere
 
 from data_parser.config import ConfigFile
 from data_retriever.csv_data_retriever import CSVDataRetriever
-#from data_retriever.sql_data_retriever import SQLDataRetriever
+from data_retriever.sql_data_retriever import SQLDataRetriever
 from data_parser.loss_parser import LossParser
 from data_parser.layer_parser import LayerParser
 from data_uploader.are_uploader import BulkUploader
@@ -20,7 +16,7 @@ LOG = logging.getLogger(__name__)
 
 retrievers = {
     "csv": CSVDataRetriever,
-    # "sql": SQLDataRetriever
+    "sql": SQLDataRetriever
 }
 
 
@@ -71,21 +67,21 @@ if __name__ == "__main__":
     # file unless it has been overridden by the command-line arguments.
     url = (
         args.url if args.url 
-        else config.get_server_details().base_url
+        else config.server.base_url
     )
     username = (
         args.username if args.username 
-        else config.get_server_details().username
+        else config.server.username
     )
     password = (
         args.password if args.password 
-        else config.get_server_details().password
+        else config.server.password
     )
     
     # This will simply throw if the credentials don't work.
     set_and_check_credentials(url, username, password)
     
-    # Initialze retrievers
+    # Initialze the retriever
     retriever = retrievers[args.source](args, config)
 
     # Retrieve layer and loss data from the source
@@ -101,16 +97,15 @@ if __name__ == "__main__":
     processed_layer_df = layer_parser.parse_layer_df()
     LOG.info("Successfully parsed input layer definitions.")
     
-    sys.exit()
     # Upload the data from Layer and Loss Dataframes
     bulk_uploader = BulkUploader(
         processed_layer_df,
         processed_loss_df,
-        loss_type,
-        config_parser.get_defaults().loss_position,
-        config_parser.get_defaults().analysis_profile_uuid,
+        retriever.loss_type,
+        config.defaults.loss_position,
+        config.defaults.analysis_profile_uuid,
         analyzere,
-        config_parser
+        config
     )
     bulk_uploader.bulk_upload()
     bulk_uploader.write_output_files()
