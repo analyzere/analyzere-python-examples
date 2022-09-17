@@ -1,22 +1,24 @@
 import argparse
 import logging
 import logging.config
+from string import ascii_uppercase
+from random import choices
 
 import analyzere
 
-from data_parser.config import ConfigFile
-from data_retriever.csv_data_retriever import CSVDataRetriever
-from data_retriever.sql_data_retriever import SQLDataRetriever
-from data_parser.loss_parser import LossParser
-from data_parser.layer_parser import LayerParser
-from data_uploader.are_uploader import BulkUploader
+from config import ConfigFile
+from retrievers.csv_data_retriever import CSVDataRetriever
+# from retrievers.sql_data_retriever import SQLDataRetriever
+from extractors.loss_set import LossSetExtractor
+from extractors.layer import LayerExtractor
+from uploaders.are_uploader import BatchUploader
 
 logging.config.fileConfig("logging.ini")
 LOG = logging.getLogger(__name__)
 
 retrievers = {
     "csv": CSVDataRetriever,
-    "sql": SQLDataRetriever
+    # "sql": SQLDataRetriever
 }
 
 
@@ -29,6 +31,11 @@ def construct_argument_parser():
     parser.add_argument("--username", help="username")
     parser.add_argument("--password", help="password")
     parser.add_argument("--config", help="configuration file", required=True)
+    parser.add_argument(
+        "--batch-id", 
+        dest="batch_id", 
+        default=''.join(choices(ascii_uppercase, k=6))
+    )
 
     subparsers = parser.add_subparsers(dest='source', metavar="SOURCE")
     subparsers.required=True
@@ -60,6 +67,8 @@ if __name__ == "__main__":
     parser = construct_argument_parser()
     args = parser.parse_args()
 
+    LOG.info(f"Uploading batch with Batch-ID: {args.batch_id}")
+
     # Load the config file
     config = ConfigFile(args.config)
     
@@ -77,7 +86,7 @@ if __name__ == "__main__":
         args.password if args.password 
         else config.server.password
     )
-    
+
     # This will simply throw if the credentials don't work.
     set_and_check_credentials(url, username, password)
     
@@ -89,23 +98,18 @@ if __name__ == "__main__":
     LOG.info("Successfully read input data.")
         
     # Parse the data from Layer and Loss Dataframes
-    loss_parser = LossParser(loss_df, retriever.loss_type, config)
-    processed_loss_df = loss_parser.parse_loss_df()
-    LOG.info("Successfully parsed input loss data.")
+    loss_set_extractor = LossSetExtractor(loss_df, retriever.loss_type, config)
+    LOG.info("Successfully initialized loss set extractor.")
 
-    layer_parser = LayerParser(layer_df, config)
-    processed_layer_df = layer_parser.parse_layer_df()
-    LOG.info("Successfully parsed input layer definitions.")
+    layer_extractor = LayerExtractor(layer_df, config)
+    LOG.info("Successfully initialized layer extractor.")
     
     # Upload the data from Layer and Loss Dataframes
-    bulk_uploader = BulkUploader(
-        processed_layer_df,
-        processed_loss_df,
-        retriever.loss_type,
-        config.defaults.loss_position,
-        config.defaults.analysis_profile_uuid,
-        analyzere,
+    batch_uploader = BatchUploader(
+        layer_extractor,
+        loss_set_extractor,
+        args.batch_id,
         config
     )
-    bulk_uploader.bulk_upload()
-    bulk_uploader.write_output_files()
+    batch_uploader.batch_upload()
+

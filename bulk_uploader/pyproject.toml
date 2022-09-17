@@ -10,6 +10,7 @@ analyzere = "^0.6.0"
 pandas = "^1.4.4"
 numpy = "^1.23.3"
 python-dateutil = "^2.8.2"
+black = "^22.8.0"
 
 [tool.poetry.dev-dependencies]
 
