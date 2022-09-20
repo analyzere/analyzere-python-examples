@@ -198,12 +198,19 @@ requires the following parameters as part of the `[sql]` section:
 ```ini
 [sql]
 # ODBC Driver String
-driver = ODBC Driver 17 for SQL Server
-# The host / server to connect to. E.g. the MS SQL hostname.
-server = DESKTOP-B640T96\SQLEXPRESS
-# Which database to connect to.
-database = my_warehouse
-# The type of loss set that is extracted from the server. Valid options are `elt`, `yelt`, and `ylt`.
+driver = {ODBC Driver 18 for SQL Server}
+# The host / server to connect to. On Windows this supports server 
+# instances of the form HOST\INSTANCE, otherwise hostname and port must be 
+# provided. 
+server = tcp:localhost,1433
+# The database to connect to.
+database = master
+# Database user's username
+username = sa
+# Database user's password
+password = Strong@Passw0rd
+# The type of loss set that is extracted from the server. Valid options are
+# `elt`, `yelt`, and `ylt`.
 loss_type = yelt
 # The SQL query to be executed to return the Layer Definitions.
 layers_query = 
@@ -212,7 +219,8 @@ layers_query =
 # The SQL query to be executed to return the Loss Set Data.
 losses_query = 
     SELECT * 
-    FROM Losses
+    FROM YELTLosses
+
 ```
 
 The `layers_query` and the `losses_query` should respectively
