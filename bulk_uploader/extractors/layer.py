@@ -5,27 +5,31 @@ from enum import Enum, auto
 from collections import Counter
 from math import isnan
 
-import logging
-LOG = logging.getLogger()
-
 
 REINSTATEMENT_SEPARATORS = [
     '~', '!', '@', '#', '$', '%', '^', '&', '*', '_', '+', 
     '=', '|', ';', ':', '/'
 ]
 
+def get_value_if_exists(row, field):
+    if field in row:
+        return getattr(row, field).item()
+    else:
+        return None
+
 def _get_typed_value(v, T):
-    if v is None:
+    if v is None or (type(v) is float and isnan(v)):
         return None
     elif type(v) is T:
-        if isnan(v):
-            return None
-        else:
-            return v
+        return v
 
-    clean = str(v).strip().replace(',', '')
-    percentage = '%' in clean
-    clean = clean.strip('%').lower()
+    percentage = False
+    if type(v) is str:
+        clean = str(v).strip().replace(',', '')
+        percentage = '%' in clean
+        clean = clean.strip('%').lower()
+    else:
+        clean = v
     
     if not clean:
         return T()
@@ -63,15 +67,15 @@ def get_date(row, field):
 
 
 def get_float(row, field):
-    return _get_float_value(getattr(row, field).item())
+    return _get_float_value(get_value_if_exists(row, field))
     
 
 def get_int(row, field):
-    return _get_int_value(getattr(row, field).item())
+    return _get_int_value(get_value_if_exists(row, field))
 
 
 def get_bool(row, field):
-    return _get_bool_value(getattr(row, field).item())
+    return _get_bool_value(get_value_if_exists(row, field))
 
 def get_str(row, field):
     if field in row:
@@ -94,6 +98,11 @@ def get_money(row, field, field_ccy=None):
     else:
         return (None, None)
 
+def get_nan_as_empty(row, field):
+    v = get_value_if_exists(row, field)
+    if type(v) == float and isnan(v):
+        return ""
+    return v
 
 class ReinstatementStyle(Enum):
     NONE = auto()
@@ -233,7 +242,7 @@ class LayerExtractor:
 
     
     def _get_reinstatements_style_2(self, row):
-        count = get_int(row, self.layer_columns.reinstatement_count)
+        count = get_int(row, self.layer_columns.reinstatement_count) or 0
         premium = get_float(row, self.layer_columns.reinstatement_premium)
         brokerage = get_float(row, self.layer_columns.reinstatement_brokerage)
 
@@ -254,7 +263,7 @@ class LayerExtractor:
     def get_metadata(self, row):
         metadata_columns = list(set(self.layer_df.columns) - set(self.layer_columns))
         return {
-            column: getattr(row, column).item()
+            column: get_nan_as_empty(row, column)
             for column in metadata_columns
         }        
 

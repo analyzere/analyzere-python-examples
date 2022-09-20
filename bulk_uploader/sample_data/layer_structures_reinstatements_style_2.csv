@@ -1,0 +1,32 @@
+Layer ID,Layer Type,Attachment,Limit,Premium,Agg Attachment,Agg Limit,Event Limit,Participation,Reinstatement Count,Reinstatement Premium,Reinstatement Brokerage,Business Unit,Program ID,Program Name,Underwriter,Cat Modeller,Region,Peril,LossSet Currency
+Demo 1 Alpha Group Layer 1,Generic,1000000,1000000,56954.16095,,,,0.75,,,,North America,1,Alpha Group,Susan Murphy,Elizabeth Hawks,Florida,HU,USD
+Demo 1 Alpha Group Layer 2,Generic,2000000,1000000,19136.65847,,,,0.5,,,,North America,1,Alpha Group,Susan Murphy,Elizabeth Hawks,Florida,HU,USD
+Demo 1 Alpha Group Layer 3,CatXL,3000000,2000000,16735.06669,,,,0.5,2,0.5,0.1,North America,1,Alpha Group,Susan Murphy,Elizabeth Hawks,Florida,HU,USD
+Demo 1 Beta Group Layer 1,CatXL,2000000,500000,54830.1493,,,,0.5,1,0.5,0.1,North America,,Beta Group,Susan Murphy,Elizabeth Hawks,Gulf; Texas; NorthEast; MidAtlantic,HU,USD
+Demo 1 Beta Group Layer 2,Generic,2500000,1000000,60604.44818,,,,0.5,,,,North America,2,Beta Group,Susan Murphy,Elizabeth Hawks,Gulf; Texas; NorthEast; MidAtlantic,HU,USD
+Demo 1 Beta Group Layer 3,Generic,3500000,1000000,26571.9241,,,,0.5,,,,North America,2,Beta Group,Susan Murphy,Elizabeth Hawks,Gulf; Texas; NorthEast; MidAtlantic,HU,USD
+Demo 1 Charlie Group Layer 1,Generic,500000,500000,39939.9225,,,,0.5,,,,North America,3,Charlie Group,Travis Costa,Elizabeth Hawks,California,EQ,USD
+Demo 1 Charlie Group Layer 2,CatXL,1000000,500000,18855.87817,,,,0.5,,,,North America,3,Charlie Group,Travis Costa,Elizabeth Hawks,California,EQ,USD
+Demo 1 Delta Group Layer 1,CatXL,500000,500000,40987.84843,,,,0.5,,,,North America,4,Delta Group,Travis Costa,Elizabeth Hawks,PacificNorthWest,EQ,USD
+Demo 1 Delta Group Layer 2,Generic,1000000,500000,13910.94292,,,,0.5,,,,North America,4,Delta Group,Travis Costa,Elizabeth Hawks,PacificNorthWest,EQ,USD
+Demo 1 Echo Group Layer 1,Generic,1000000,2000000,55774.15217,,,,0.5,,,,North America,5,Echo Group,Joseph Conley,Anthony Weems,MidWest; SouthWest; SouthEast,CS,USD
+Demo 1 Echo Group Layer 2,Generic,3000000,3000000,8293.077066,,,,0.5,,,,North America,5,Echo Group,Joseph Conley,Anthony Weems,MidWest; SouthWest; SouthEast,CS,USD
+Demo 1 Foxtrot Group Layer 1,Generic,5000000,2000000,168088.5539,,,,0.5,,,,North America,6,Foxtrot Group,Susan Murphy,Anthony Weems,Florida; Gulf; Texas; NorthEast; MidAtlantic; California; NewMadrid; PacificNorthWest,HU; EQ,USD
+Demo 1 Foxtrot Group Layer 2,Generic,7000000,2000000,76448.63998,,,,0.5,,,,North America,6,Foxtrot Group,Susan Murphy,Anthony Weems,Florida; Gulf; Texas; NorthEast; MidAtlantic; California; NewMadrid; PacificNorthWest,HU; EQ,USD
+Demo 1 Foxtrot Group Layer 3,Generic,9000000,2000000,50044.58671,,,,0.5,,,,North America,6,Foxtrot Group,Susan Murphy,Anthony Weems,Florida; Gulf; Texas; NorthEast; MidAtlantic; California; NewMadrid; PacificNorthWest,HU; EQ,USD
+Demo 1 Foxtrot Group Layer 4,Generic,11000000,2000000,28425.02878,,,,0.5,,,,North America,6,Foxtrot Group,Susan Murphy,Anthony Weems,Florida; Gulf; Texas; NorthEast; MidAtlantic; California; NewMadrid; PacificNorthWest,HU; EQ,USD
+Demo 1 Golf Group Layer 1,AggXL,10000000,5000000,119718.3336,10000000,5000000,,0.5,,,,North America,7,Golf Group,Susan Murphy,Anthony Weems,Florida; Gulf; Texas; NorthEast; MidAtlantic; California; NewMadrid; PacificNorthWest; MidWest; SouthWest; SouthEast,HU; CS; WSt; EQ,USD
+Demo 1 Golf Group Layer 2,AggXL,15000000,5000000,5997.246573,15000000,5000000,,0.5,,,,North America,7,Golf Group,Susan Murphy,Anthony Weems,Florida; Gulf; Texas; NorthEast; MidAtlantic; California; NewMadrid; PacificNorthWest; MidWest; SouthWest; SouthEast,HU; CS; WSt; EQ,USD
+Demo 1 Golf Group Layer 3,Generic,20000000,5000000,0,20000000,5000000,,0.5,,,,North America,7,Golf Group,Susan Murphy,Anthony Weems,Florida; Gulf; Texas; NorthEast; MidAtlantic; California; NewMadrid; PacificNorthWest; MidWest; SouthWest; SouthEast,HU; CS; WSt; EQ,USD
+Demo 1 Hotel Group Layer 1,QuotaShare,,,318588.3141,,,400000,0.5,,,,North America,8,Hotel Group,Travis Costa,Anthony Weems,Florida,HU,USD
+Demo 1 Hotel Group Layer 2,QuotaShare,,,536342.5655,,,300000,0.5,,,,North America,8,Hotel Group,Travis Costa,Anthony Weems,Gulf; Texas; NorthWest; MidAtlantic,HU,USD
+Demo 1 India Group Layer 1,QuotaShare,,,199482.6701,,,500000,0.5,,,,North America,9,India Group,Jonathan Manwaring,Michael Robinson,California,EQ,USD
+Demo 1 India Group Layer 2,QuotaShare,,,79552.86146,,,200000,0.5,,,,North America,9,India Group,Jonathan Manwaring,Michael Robinson,NewMadrid,EQ,USD
+Demo 1 India Group Layer 3,QuotaShare,,,101708.5095,,,300000,0.5,,,,North America,9,India Group,Jonathan Manwaring,Michael Robinson,PacificNorthWest,EQ,USD
+Demo 1 India Group Layer 4,QuotaShare,,,541772.902,,,300000,0.5,,,,North America,9,India Group,Jonathan Manwaring,Michael Robinson,MidWest,CS; WSt,USD
+Demo 1 India Group Layer 5,QuotaShare,,,245810.8696,,,300000,0.5,,,,North America,9,India Group,Jonathan Manwaring,Michael Robinson,PacificNorthWest,EQ; WSt,USD
+Demo 1 Juliet Group Layer 1,Generic,,210000,143346.7157,,,,0.5,,,,North America,10,Juliet Group,Jonathan Manwaring,Michael Robinson,Florida,HU,USD
+Demo 1 Juliet Group Layer 2,CatXL,,210000,140422.691,,,,0.5,,,,North America,10,Juliet Group,Jonathan Manwaring,Michael Robinson,Texas,HU,USD
+Demo 1 Juliet Group Layer 3,Generic,,180000,59850.23238,,,,0.5,,,,North America,10,Juliet Group,Jonathan Manwaring,Michael Robinson,California,EQ,USD
+Demo 1 Juliet Group Layer 4,Generic,,150000,501890.9572,,,,0.5,,,,North America,10,Juliet Group,Jonathan Manwaring,Michael Robinson,"MidWest, SouthWest, SouthEast",CS,USD
+Demo 1 Kilo Group Layer 1,QuotaShare,,,2697833,,,1000000000,0.5,,,,International,11,Kilo Group International,Patricia Yates,Martin Flores,Japan; Australia; Europe; LatinAmerica; Carribean;,,USD

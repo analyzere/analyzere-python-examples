@@ -1,13 +1,10 @@
 from collections import namedtuple
 
-import logging
-LOG = logging.getLogger()
-
 # These are the column names required by Analyze Re
 ARE_TARGET_COLUMNS = namedtuple(
     "TargetColumns", 
     [
-        "loss_set_id", "event_id", "loss", "trial_id", "sequence",
+        "loss_set_id", "event_id", "loss", "trial_id", "day",
         "reinstatement_premium", "reinstatement_brokerage"
     ]
 )._make(
@@ -16,7 +13,7 @@ ARE_TARGET_COLUMNS = namedtuple(
         "EventId", 
         "Loss", 
         "Trial", 
-        "Sequence", 
+        "Day", 
         "ReinstatementPremium", 
         "ReinstatementBrokerage"
     ]
@@ -24,7 +21,7 @@ ARE_TARGET_COLUMNS = namedtuple(
 
 REQUIRED_COLUMNS = dict(
     elt=["event_id", "loss"],
-    yelt=["trial_id", "sequence", "event_id", "loss"],
+    yelt=["trial_id", "day", "event_id", "loss"],
     ylt=["trial_id", "loss"],
 )
 
@@ -36,7 +33,7 @@ OPTIONAL_COLUMNS = dict(
 
 SORT_COLUMNS = dict(
     elt=["event_id"],
-    yelt=["trial_id", "sequence", "event_id"],
+    yelt=["trial_id", "day", "event_id"],
     ylt=["trial_id"]
 )
 
@@ -73,12 +70,7 @@ class LossSetExtractor:
                 "Not all required required columns are found "
                 "in the input loss data."
             )
-        
-        # Create a new view of the DataFrame only containing the required
-        # columns.
-        #LOG.info(f"Required columns are {list(required_columns)}")
-        #self.loss_df = self.loss_df[list(required_columns)]
-
+                
     
     def check_loss_content(self):
         """
@@ -122,8 +114,6 @@ class LossSetExtractor:
         Returns the subset of the loss data that is associated with a
         specific loss_set_id.
         """
-        LOG.info(f"Attempting to get loss set {loss_set_id}")
-        LOG.info(f"Columns are {self.loss_df.columns}")
         # Constrain all losses to only the loss set in question
         loss_set = self.loss_df[
             self.loss_df[ARE_TARGET_COLUMNS.loss_set_id] == loss_set_id

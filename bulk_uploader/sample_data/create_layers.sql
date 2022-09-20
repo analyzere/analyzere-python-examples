@@ -1,0 +1,20 @@
+CREATE TABLE Layers (
+  "Layer ID" VARCHAR(32),
+  "Layer Type" VARCHAR(16),
+  "Attachment" FLOAT,
+  "Limit" FLOAT,
+  "Premium" FLOAT,
+  "Agg Attachment" FLOAT,
+  "Agg Limit" FLOAT,
+  "Event Limit" FLOAT,
+  "Participation" FLOAT,
+  "Reinstatements" VARCHAR(32),
+  "Business Unit" VARCHAR(32),
+  "Program ID" INT,
+  "Program Name" VARCHAR(32),
+  "Underwriter" VARCHAR(32),
+  "Cat Modeller" VARCHAR(32),
+  "Region" VARCHAR(128),
+  "Peril" VARCHAR(32),
+  "LossSet Currency" VARCHAR(3)
+);

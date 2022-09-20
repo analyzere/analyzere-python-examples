@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "bulk_uploader"
+name = "batch_uploader"
 version = "0.1.0"
 description = ""
 authors = ["Analyze Re Developers"]
@@ -11,6 +11,7 @@ pandas = "^1.4.4"
 numpy = "^1.23.3"
 python-dateutil = "^2.8.2"
 black = "^22.8.0"
+pyodbc = "^4.0.34"
 
 [tool.poetry.dev-dependencies]
 
