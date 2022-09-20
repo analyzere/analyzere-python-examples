@@ -19,10 +19,8 @@ from uploaders.are_uploader import BatchUploader
 logging.config.fileConfig("logging.ini")
 LOG = logging.getLogger(__name__)
 
-retrievers = {
-    "csv": CSVDataRetriever,
-    "sql": SQLDataRetriever
-}
+retrievers = {"csv": CSVDataRetriever, "sql": SQLDataRetriever}
+
 
 def construct_argument_parser():
     # Global Parser
@@ -33,18 +31,18 @@ def construct_argument_parser():
     parser.add_argument("--username", help="username")
     parser.add_argument("--password", help="password")
     parser.add_argument(
-        "--config", 
-        help="configuration file", 
-        default=Path(__file__).parent / "config.ini"
+        "--config",
+        help="configuration file",
+        default=Path(__file__).parent / "config.ini",
     )
     parser.add_argument(
-        "--batch-id", 
-        dest="batch_id", 
-        default=''.join(choices(ascii_uppercase, k=6))
+        "--batch-id",
+        dest="batch_id",
+        default="".join(choices(ascii_uppercase, k=6)),
     )
 
-    subparsers = parser.add_subparsers(dest='source', metavar="SOURCE")
-    subparsers.required=True
+    subparsers = parser.add_subparsers(dest="source", metavar="SOURCE")
+    subparsers.required = True
     # Add the additional arguments for our retrievers
     for name in retrievers:
         subparser = subparsers.add_parser(name)
@@ -77,25 +75,16 @@ if __name__ == "__main__":
 
     # Load the config file
     config = ConfigFile(args.config)
-    
-    # Log in to the server - Use the server details from the config 
+
+    # Log in to the server - Use the server details from the config
     # file unless it has been overridden by the command-line arguments.
-    url = (
-        args.url if args.url 
-        else config.server.base_url
-    )
-    username = (
-        args.username if args.username 
-        else config.server.username
-    )
-    password = (
-        args.password if args.password 
-        else config.server.password
-    )
+    url = args.url if args.url else config.server.base_url
+    username = args.username if args.username else config.server.username
+    password = args.password if args.password else config.server.password
 
     # This will simply throw if the credentials don't work.
     set_and_check_credentials(url, username, password)
-    
+
     # Initialze the retriever
     retriever = retrievers[args.source](args, config)
 
@@ -103,19 +92,18 @@ if __name__ == "__main__":
     layers_data = retriever.get_layers()
     losses_data = retriever.get_losses()
     LOG.info("Successfully read input data.")
-        
+
     # Parse the data from Layer and Loss Dataframes
-    loss_set_extractor = LossSetExtractor(losses_data, retriever.loss_type, config)
+    loss_set_extractor = LossSetExtractor(
+        losses_data, retriever.loss_type, config
+    )
     LOG.info("Successfully initialized loss set extractor.")
 
     layer_extractor = LayerExtractor(layers_data, config)
     LOG.info("Successfully initialized layer extractor.")
-    
+
     # Upload the data from Layer and Loss Dataframes
     batch_uploader = BatchUploader(
-        layer_extractor,
-        loss_set_extractor,
-        args.batch_id,
-        config
+        layer_extractor, loss_set_extractor, args.batch_id, config
     )
     batch_uploader.batch_upload()

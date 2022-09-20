@@ -26,6 +26,7 @@ import logging
 
 LOG = logging.getLogger()
 
+
 class DataToCSVIO:
     def __init__(self, data):
         self.csv_io = StringIO()
@@ -38,6 +39,7 @@ class DataToCSVIO:
     def __exit__(self, *args):
         pass
 
+
 class BatchUploader:
     """
     Responsible for uploading Losses and Layers to the platform.
@@ -48,6 +50,7 @@ class BatchUploader:
         * Create a new Analyze Re layer object representing the layer
         * Creating a CSV file with mappings from uploaded Layer to Loss UUID
     """
+
     def create_elt_loss_set(self, layer_id):
         return LossSet(
             type="ELTLossSet",
@@ -97,16 +100,15 @@ class BatchUploader:
 
         # Get the sorted loss set data first
         data = self.loss_ext.get_loss_set(layer_id)
-        
+
         # Ensure the loss set has data
         if len(data) == 0:
             return None
-        
+
         factory = loss_set_factories[self.loss_ext.loss_type]
         loss_set = factory(layer_id)
         loss_set.save()
 
-        
         # Convert data to CSV file stream
         with DataToCSVIO(data) as f:
             loss_set.upload_data(f)
@@ -319,10 +321,10 @@ class BatchUploader:
             LOG.info(f"Created layer {layer}")
 
             return (
-                layer_id, 
-                layer.id, 
-                [ls.id for ls in loss_sets], 
-                layer.description
+                layer_id,
+                layer.id,
+                [ls.id for ls in loss_sets],
+                layer.description,
             )
 
         with ThreadPoolExecutor(4) as pool:
@@ -346,7 +348,7 @@ class BatchUploader:
                         # Duplicate this until we have support for multiple loss sets per layer
                         layer_id,
                         are_layer_uuid,
-                        ';'.join(are_loss_set_uuids),
+                        ";".join(are_loss_set_uuids),
                         description,
                     )
                     for (

@@ -7,15 +7,31 @@ from math import isnan
 
 
 REINSTATEMENT_SEPARATORS = [
-    '~', '!', '@', '#', '$', '%', '^', '&', '*', '_', '+', 
-    '=', '|', ';', ':', '/'
+    "~",
+    "!",
+    "@",
+    "#",
+    "$",
+    "%",
+    "^",
+    "&",
+    "*",
+    "_",
+    "+",
+    "=",
+    "|",
+    ";",
+    ":",
+    "/",
 ]
+
 
 def get_value_if_exists(row, field):
     if field in row:
         return getattr(row, field).item()
     else:
         return None
+
 
 def _get_typed_value(v, T):
     if v is None or (type(v) is float and isnan(v)):
@@ -25,12 +41,12 @@ def _get_typed_value(v, T):
 
     percentage = False
     if type(v) is str:
-        clean = str(v).strip().replace(',', '')
-        percentage = '%' in clean
-        clean = clean.strip('%').lower()
+        clean = str(v).strip().replace(",", "")
+        percentage = "%" in clean
+        clean = clean.strip("%").lower()
     else:
         clean = v
-    
+
     if not clean:
         return T()
     else:
@@ -48,8 +64,9 @@ def _get_int_value(v):
 def _get_bool_value(v):
     if v is None or type(v) is bool:
         return v
-    
+
     return str(v).strip().lower() == "true"
+
 
 def get_date(row, field):
     if field in row:
@@ -59,7 +76,9 @@ def get_date(row, field):
                 date = dateutil.parser.parse(value, ignoretz=True)
                 return date.replace(tzinfo=timezone.utc)
             except (ValueError, TypeError) as e:
-                raise ValueError('Unrecognized {} date: {}'.format(field, value))
+                raise ValueError(
+                    "Unrecognized {} date: {}".format(field, value)
+                )
         else:
             return None
     else:
@@ -68,7 +87,7 @@ def get_date(row, field):
 
 def get_float(row, field):
     return _get_float_value(get_value_if_exists(row, field))
-    
+
 
 def get_int(row, field):
     return _get_int_value(get_value_if_exists(row, field))
@@ -76,6 +95,7 @@ def get_int(row, field):
 
 def get_bool(row, field):
     return _get_bool_value(get_value_if_exists(row, field))
+
 
 def get_str(row, field):
     if field in row:
@@ -98,23 +118,26 @@ def get_money(row, field, field_ccy=None):
     else:
         return (None, None)
 
+
 def get_nan_as_empty(row, field):
     v = get_value_if_exists(row, field)
     if type(v) == float and isnan(v):
         return ""
     return v
 
+
 class ReinstatementStyle(Enum):
     NONE = auto()
     ONE = auto()
     TWO = auto()
+
 
 class LayerExtractor:
     def _get_reinstatement_style(self):
         """
         Returns the configured reinstatements as a list of tuples. There
         are two fundamental styles of specifying reinstatements:
-        
+
         1. Column Reinstatements: double delimited string like
            '1.0;0.5|1.0;.05|0.5;0.25'
         2. Columns ReinstatementCount, ReinstatementPremium,
@@ -126,7 +149,7 @@ class LayerExtractor:
         style_2 = [
             self.layer_columns.reinstatement_count in self.layer_df,
             self.layer_columns.reinstatement_premium in self.layer_df,
-            self.layer_columns.reinstatement_brokerage in self.layer_df
+            self.layer_columns.reinstatement_brokerage in self.layer_df,
         ]
 
         if any(style_1) and any(style_2):
@@ -170,7 +193,7 @@ class LayerExtractor:
 
     def _get_reinstatements_style_1(self, row):
         value = get_str(row, self.layer_columns.reinstatements)
-        
+
         # If nothing is specified return an empty list of reinstatements
         if not value:
             return []
@@ -180,14 +203,16 @@ class LayerExtractor:
         # Determine the count of each character in value string
         counts = Counter(value)
         filtered = dict(
-            (separator, count) 
+            (separator, count)
             for separator, count in counts.items()
             if separator in REINSTATEMENT_SEPARATORS
         )
 
         # We should only have at most 2 separators
         if len(filtered) > 2:
-            raise ValueError(f"Malformed reinstatements value string: {value}")
+            raise ValueError(
+                f"Malformed reinstatements value string: {value}"
+            )
 
         # If we only have one separator then only a single reinstatement is
         # specified and the separator is the premium-brokerage separator.
@@ -195,13 +220,15 @@ class LayerExtractor:
         if len(filtered) == 1:
             # Get the separator
             pb_separator = list(filtered.keys()).pop()
-            
+
             # Make sure the separator only occurs once
             if filtered[pb_separator] != 1:
                 # There should only be one occurrence of the
                 # premium-brokerage separator
-                raise ValueError(f"Malformed reinstatements value string: {value}")
-            
+                raise ValueError(
+                    f"Malformed reinstatements value string: {value}"
+                )
+
             # Pick any other separator as the reinstatement separator
             ri_separator = [
                 sep for sep in REINSTATEMENT_SEPARATORS if sep != pb_separator
@@ -209,44 +236,48 @@ class LayerExtractor:
         elif len(filtered) == 2:
             # Get both separators and their counts
             first, second = list(filtered.items())
-            
+
             # Make sure both separators don't occur the same amount and
             # their frequency is just one occurrence apart.
-            if first[1] == second[1] or abs(first[1]-second[1]) != 1:
-                raise ValueError(f"Malformed reinstatements value string: {value}")
+            if first[1] == second[1] or abs(first[1] - second[1]) != 1:
+                raise ValueError(
+                    f"Malformed reinstatements value string: {value}"
+                )
 
             # The premium-brokerage separator must be the more frequent
             # separator
-            pb_separator = first[0] if (first[1]-1) == second[1] else second[0]
+            pb_separator = (
+                first[0] if (first[1] - 1) == second[1] else second[0]
+            )
             #                              Note^^^
-             
+
             # The reinstatement separator must be the less frequent
             # separator
-            ri_separator = first[0] if (first[1]+1) == second[1] else second[0]
+            ri_separator = (
+                first[0] if (first[1] + 1) == second[1] else second[0]
+            )
             #                              Note^^^
         else:
-            raise ValueError(f"Malformed reinstatements value string: {value}")
+            raise ValueError(
+                f"Malformed reinstatements value string: {value}"
+            )
 
         # Create the list of reinstatements, this will raise errors if
         # there are any malformed structures
         return [
-            (
-                float(premium),
-                float(brokerage)
-            )
+            (float(premium), float(brokerage))
             for premium, brokerage in [
-                tuple(ri.split(pb_separator)) 
+                tuple(ri.split(pb_separator))
                 for ri in value.split(ri_separator)
             ]
         ]
 
-    
     def _get_reinstatements_style_2(self, row):
         count = get_int(row, self.layer_columns.reinstatement_count) or 0
         premium = get_float(row, self.layer_columns.reinstatement_premium)
         brokerage = get_float(row, self.layer_columns.reinstatement_brokerage)
 
-        return [ (premium, brokerage) ] * count
+        return [(premium, brokerage)] * count
 
     def get_reinstatements(self, row):
         if self.reinstatement_style == ReinstatementStyle.NONE:
@@ -259,14 +290,14 @@ class LayerExtractor:
         else:
             return []
 
-
     def get_metadata(self, row):
-        metadata_columns = list(set(self.layer_df.columns) - set(self.layer_columns))
+        metadata_columns = list(
+            set(self.layer_df.columns) - set(self.layer_columns)
+        )
         return {
             column: get_nan_as_empty(row, column)
             for column in metadata_columns
-        }        
-
+        }
 
     def validate(self):
         if len(self.layer_df) == 0:
@@ -277,7 +308,6 @@ class LayerExtractor:
                 f"Required column {self.layer_columns.layer_id} not "
                 f"found in layer input file."
             )
-            
 
     def get_layers(self):
         layers = self.layer_df[self.layer_columns.layer_id]
@@ -289,13 +319,11 @@ class LayerExtractor:
             )
 
         return list(unique_layers)
-    
 
     def get_layer_row(self, layer):
         return self.layer_df.loc[
             self.layer_df[self.layer_columns.layer_id] == layer
         ]
-       
 
     def __init__(self, layer_df, config):
         self.layer_df = layer_df
@@ -303,5 +331,3 @@ class LayerExtractor:
         self.layer_columns = self.config.layer_columns
         self.reinstatement_style = self._get_reinstatement_style()
         self.validate()
-
-        

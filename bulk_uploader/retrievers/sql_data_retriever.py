@@ -1,11 +1,13 @@
 import pyodbc
 import pandas as pd
 
+
 class SQLDataRetriever:
     """
     Retrieves layer definitions and loss data from SQL queries and loads
     them into Pandas DataFrames for downstream processing.
     """
+
     @classmethod
     def add_parser_arguments(cls, parser):
         pass
@@ -18,7 +20,7 @@ class SQLDataRetriever:
                 database=self.config.sql.database,
                 uid=self.config.sql.username,
                 pwd=self.config.sql.password,
-                encrypt="no"
+                encrypt="no",
             )
         return self.connection
 

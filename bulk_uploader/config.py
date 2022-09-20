@@ -5,11 +5,13 @@ from pathlib import Path
 
 LOG = logging.getLogger()
 
+
 class ConfigFile:
     """
     This class provides properties-style access to the sections and
     configuration values in the configuration file.
     """
+
     def __getattribute__(self, attr):
         """
         Overloading the attribute accessor to intercept configuration
@@ -30,13 +32,14 @@ class ConfigFile:
                 return t
         else:
             # If a private member or an attribute that does not refer to a
-            # configuration section, then call the default implementation. 
+            # configuration section, then call the default implementation.
             return super().__getattribute__(attr)
-        
 
     def __init__(self, filename):
         if not Path(filename).is_file():
-            LOG.error(f"Configuration file {filename} does not exist or is not a file.")
+            LOG.error(
+                f"Configuration file {filename} does not exist or is not a file."
+            )
             raise ValueError(f"Configuration file not found.")
         self._config = configparser.ConfigParser()
         self._config.read(filename)
