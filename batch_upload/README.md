@@ -38,7 +38,7 @@ The general schema of the layer definitions data set is as follows:
 | Column Name | Description | Required | Default |
 |-|-|-|-|
 |`layer_id` | User-defined ID for the layer. This is used as a key to identify loss sets in the loss sets data set. | Yes | None |
-|`loss_set_currency` | Three-letter currency code of the currency of loss values in the loss set. | No | Fall-back to `currency`. |
+|`loss_set_ccy` | Three-letter currency code of the currency of loss values in the loss set. | No | Fall-back to `currency`. |
 |`loss_set_start_date` | For YELT loss sets, the absolute start date a reference for `sequence` offsets. | Yes for YELT loss sets. | None |
 |`layer_type` | `CatXL`, `QuotaShare`, `AggXL`, or `Generic` | Yes | None |
 |`description` | Value of the layer's description field to be stored. | No | None |
