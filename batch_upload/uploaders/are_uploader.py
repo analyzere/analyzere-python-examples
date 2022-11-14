@@ -51,24 +51,24 @@ class BatchUploader:
         * Creating a CSV file with mappings from uploaded Layer to Loss UUID
     """
 
-    def create_elt_loss_set(self, layer_id):
+    def create_elt_loss_set(self, layer_id, currency):
         return LossSet(
             type="ELTLossSet",
             description=f"Loss Set for Layer {layer_id}",
             event_catalogs=self.analysis_profile.event_catalogs,
-            currency=self.config.defaults.currency,
+            currency=currency,
             loss_type=self.config.defaults.loss_perspective,
             meta_data=dict(
                 upload_batch_layer_id=layer_id, upload_batch_id=self.batch_id
             ),
         )
 
-    def create_yelt_loss_set(self, layer_id):
+    def create_yelt_loss_set(self, layer_id, currency):
         return LossSet(
             type="YELTLossSet",
             description=f"Loss Set for Layer {layer_id}",
             event_catalogs=self.analysis_profile.event_catalogs,
-            currency=self.config.defaults.currency,
+            currency=currency,
             loss_type=self.config.defaults.loss_perspective,
             start_date=self.config.defaults.start_date,
             trial_count=self.config.defaults.trial_count,
@@ -77,12 +77,12 @@ class BatchUploader:
             ),
         )
 
-    def create_ylt_loss_set(self, layer_id):
+    def create_ylt_loss_set(self, layer_id, currency):
         return LossSet(
             type="YLTLossSet",
             description=f"Loss Set for Layer {layer_id}",
             event_catalogs=self.analysis_profile.event_catalogs,
-            currency=self.config.defaults.currency,
+            currency=currency,
             loss_type=self.config.defaults.loss_perspective,
             start_date=self.config.defaults.start_date,
             trial_count=self.config.defaults.trial_count,
@@ -91,7 +91,7 @@ class BatchUploader:
             ),
         )
 
-    def upload_loss_set(self, layer_id):
+    def upload_loss_set(self, layer_id, currency):
         loss_set_factories = dict(
             elt=self.create_elt_loss_set,
             yelt=self.create_yelt_loss_set,
@@ -106,7 +106,7 @@ class BatchUploader:
             return None
 
         factory = loss_set_factories[self.loss_ext.loss_type]
-        loss_set = factory(layer_id)
+        loss_set = factory(layer_id, currency)
         loss_set.save()
 
         # Convert data to CSV file stream
@@ -304,15 +304,24 @@ class BatchUploader:
         layers = self.layer_ext.get_layers()
 
         def create_and_upload(layer_id):
+            # Fetch the row with the layer definitions
+            row = self.layer_ext.get_layer_row(layer_id)
+
+            # Extract the loss set currency or set to default
+            loss_set_ccy = (
+                    get_str(row, self.layer_columns.loss_set_ccy)
+                    or get_str(row, self.layer_columns.currency)
+                    or self.config.defaults.currency
+                ).upper()
+
             # Upload the loss set first
-            loss_set = self.upload_loss_set(layer_id)
+            loss_set = self.upload_loss_set(layer_id, loss_set_ccy)
 
             # If loss sets are empty we don't upload them and don't have a
             # reference.
             loss_sets = [loss_set] if loss_set else []
 
             # Construct layer definition from row
-            row = self.layer_ext.get_layer_row(layer_id)
             layer_type = get_str(row, self.layer_columns.layer_type).lower()
 
             layer = layer_factories[layer_type](layer_id, loss_sets, row)
