@@ -19,6 +19,7 @@ Given the above requirements:
 4. Run `jupyter notebook` in your terminal
 
 ## Running the Jupyter Notebook with MyBinder
+MyBinder will allow you to run the notebook without the need to do anything locally.
 
 1. Navigate to [MyBinder](https://mybinder.org)
 2. Insert `https://github.com/analyzere/analyzere-python-examples` into the "Github Repository name or URL" field
