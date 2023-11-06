@@ -1,0 +1,348 @@
+import sys
+import multiprocessing
+import logging
+from concurrent.futures import ThreadPoolExecutor
+
+import analyzere
+from analyzere.base_resources import Reference
+from analyzere import MonetaryUnit
+import ipywidgets as widgets
+from IPython.display import display, FileLink
+
+from utils.alert import Alert as alert
+from utils.are_resources import check_resource_upload_status
+from utils.file_handler import (
+    read_input_file,
+    write_output_file,
+    find_column,
+    join,
+    read_byte_stream_into_csv,
+)
+
+
+logger = logging.getLogger()
+
+
+class LayerLossDuplicator:
+    def __init__(
+        self,
+        output_dir,
+        event_weights_df,
+        config,
+        layer_ids_csv=None,
+        portfolio_uuid=None,
+    ):
+        self.output_dir = output_dir
+        self.event_weights_df = event_weights_df
+        self.layer_ids_csv = layer_ids_csv
+        self.portfolio_uuid = portfolio_uuid
+        self.config = config
+
+        self.layer_list = []  # List of LayerViews
+        self.loss_set_mapping = {}  # Old LossSet UUID : New LossSet UUID
+
+    def extract_layers(self):
+        if not self.layer_ids_csv is None and len(str(self.layer_ids_csv)) > 0:
+            # get the list of LayerViews from the input CSV
+            layer_list_df = read_input_file(self.layer_ids_csv)
+            layer_column = find_column(
+                "layer", layer_list_df.columns.tolist()
+            )
+            self.layer_list = layer_list_df[layer_column].unique().tolist()
+        else:
+            if not self.portfolio_uuid is None:
+                # get the list of LayerViews from the PortfolioView UUID
+                try:
+                    are_portfolio = analyzere.PortfolioView.retrieve(
+                        self.portfolio_uuid
+                    )
+                except Exception as e:
+                    alert.exception(
+                        f"Could not retrieve PortfolioView {self.portfolio_uuid}: {e}"
+                    )
+                else:
+                    self.layer_list = [
+                        layer_view.id
+                        for layer_view in are_portfolio.layer_views
+                    ]
+                    alert.info(
+                        f"Fetched {len(self.layer_list)} LayerView from PortfolioView {self.portfolio_uuid}"
+                    )
+
+    # Generic Layer to replace filter layer in structure
+    def replace_filter_layer(self, loss_sets):
+        unlimited = sys.float_info.max
+        currency = self.config.get("defaults", "currency")
+        generic_layer = analyzere.Layer(
+            type="Generic",
+            description="Generic Layer",
+            loss_sets=[loss_sets],
+            participation=1,
+            aggregate_attachment=MonetaryUnit(0, currency),
+            aggregate_limit=MonetaryUnit(unlimited, currency),
+            attachment=MonetaryUnit(0, currency),
+            franchise=MonetaryUnit(0, currency),
+            limit=MonetaryUnit(unlimited, currency),
+        ).save()
+        return generic_layer
+
+    def scale_elt(self, elt_df, loss_set):
+        alert.debug(f"Scaling loss_set {loss_set.id}")
+        # Normalize the EventId column
+        event_id_column = find_column("event", elt_df.columns.tolist())
+        self.event_weights_df = self.event_weights_df.rename(
+            columns={self.event_weights_df.columns[0]: event_id_column}
+        )
+
+        # Perform left-join of weights table and loss set table.
+        # Only events that occur in the weights table will remain.
+        weighted_elt_df = join(
+            self.event_weights_df, elt_df, how="left", on=event_id_column
+        )
+        weighted_elt_df = weighted_elt_df.rename(
+            mapper=lambda name: name.upper(), axis=1
+        )
+        weighted_elt_df.dropna(inplace=True)
+
+        try:
+            if len(weighted_elt_df.columns) < 6:
+                # ELT without secondary uncertainty (maybe AIR)
+                alert.debug(
+                    f"ELT {loss_set.id} without secondary uncertainty"
+                )
+                # Scale mean loss value
+                weighted_elt_df["LOSS"] = (
+                    weighted_elt_df.LOSS * weighted_elt_df.WEIGHT
+                )
+                weighted_elt_df["STDDEVC"] = 0
+                weighted_elt_df["STDDEVI"] = 0
+                # Set exposure value equal to the scaled loss
+                weighted_elt_df["EXPVALUE"] = (
+                    weighted_elt_df.LOSS * weighted_elt_df.WEIGHT
+                )
+                # Remove EventID and Weight columns
+                weighted_elt_df = weighted_elt_df.drop(
+                    ["EVENTID", "WEIGHT"], axis=1
+                )
+                # Set EventId for all entries to 1
+                # NOTE: The platform will automatically combine multiple entries with the same event ID into a single occurrence.
+                weighted_elt_df["EVENTID"] = 1
+            else:
+                # ELT with secondary uncertainty (likely RMS)
+                alert.debug(f"ELT {loss_set.id} with secondary uncertainty")
+                # Scale mean loss value
+                weighted_elt_df["PERSPVALUE"] = (
+                    weighted_elt_df.PERSPVALUE * weighted_elt_df.WEIGHT
+                )
+                # Scale independent standard deviation
+                weighted_elt_df["STDDEVI"] = (
+                    weighted_elt_df.STDDEVI * weighted_elt_df.WEIGHT
+                )
+                # Scale correlated standard deviation
+                weighted_elt_df["STDDEVC"] = (
+                    weighted_elt_df.STDDEVC * weighted_elt_df.WEIGHT
+                )
+                # Scale exposure value
+                weighted_elt_df["EXPVALUE"] = (
+                    weighted_elt_df.EXPVALUE * weighted_elt_df.WEIGHT
+                )
+                # Remove EventID and Weight columns
+                weighted_elt_df = weighted_elt_df.drop(
+                    ["EVENTID", "WEIGHT"], axis=1
+                )
+                # Set EventId for all entries to 1
+                # NOTE: The platform will automatically combine multiple entries with the same event ID into a single occurrence.
+                weighted_elt_df["EVENTID"] = 1
+        except Exception as e:
+            alert.exception(
+                f"Exception occured while scaling Loss Set: {loss_set.id}"
+            )
+        else:
+            return weighted_elt_df
+
+    def transform_loss_set(self, loss_set):
+        alert.debug(f"Transforming loss_set {loss_set.id}")
+        old_elt_data = loss_set.download_data()
+        elt_df = read_byte_stream_into_csv(old_elt_data)
+        # Scale and transform loss set data and save into string buffer
+        scaled_df = self.scale_elt(elt_df, loss_set)
+        if scaled_df is not None:
+            new_description = (f"ER__{loss_set.description}").replace(" ", "")
+            new_loss_set = self.upload_elt(
+                new_description,
+                scaled_df.to_csv(index=False),
+                loss_set.currency,
+                loss_set.event_catalogs,
+            )
+            return new_loss_set
+
+    def upload_elt(self, description, elt, currency, catalogs):
+        try:
+            loss_set = analyzere.LossSet(
+                type="ELTLossSet",
+                description=description,
+                event_catalogs=catalogs,
+                currency=currency,
+                loss_type=self.config.get("defaults", "loss_perspective"),
+            ).save()
+            loss_set.upload_data(elt)
+            check_resource_upload_status(loss_set)
+        except Exception as e:
+            alert.exception(
+                f"Exception occured while uploading ELT {loss_set.id}: {e}"
+            )
+        if loss_set.status == "processing_succeeded":
+            alert.debug(f"Uploaded loss_set {loss_set.id}")
+        else:
+            alert.error(
+                f"LossSet {loss_set.id} was uploaded, but failed while processing. {loss_set.status_message}"
+            )
+
+        return loss_set
+
+    def modify_layer(self, layer):
+        # Recursively process the layer structure and transform loss sets
+        if hasattr(layer, "ref_id"):
+            layer = analyzere.LayerView.retrieve(layer.ref_id).layer
+        if hasattr(layer, "analysis_profile"):
+            layer = layer.layer
+        if type(layer) in [analyzere.LayerView, Reference]:
+            layer = layer.layer
+        if layer.type == "BackAllocatedLayer":
+            logger.exception("Back Allocated layers are not supported")
+            raise
+
+        if layer.type == "NestedLayer":
+            layer.sink = self.modify_layer(layer.sink)
+            layer.sources = [self.modify_layer(s) for s in layer.sources]
+
+        if hasattr(layer, "loss_sets"):
+            try:
+                # no losses to process
+                if len(layer.loss_sets) == 0 and layer.type != "FilterLayer":
+                    pass
+                # Need to replace Filter Layers with unlimited Generic layer
+                elif layer.type == "FilterLayer":
+                    # Transform any loss sets that the Filter Layer may have
+                    loss_sets = []
+
+                    for loss_set in layer.loss_sets:
+                        transformed = self.transform_loss_set(loss_set)
+                        if transformed:
+                            # Add transformed loss set to cache
+                            self.loss_set_mapping[
+                                loss_set.id
+                            ] = transformed.id
+                            loss_sets.append(transformed)
+
+                    layer = self.replace_filter_layer(loss_sets)
+                else:
+                    # Transform the loss sets in the loss set list in-place
+                    loss_sets = []
+
+                    for index, loss_set in enumerate(layer.loss_sets):
+                        # Skip YELTs and parametric loss sets
+                        if (
+                            loss_set.type == "ParametricLossSet"
+                            or loss_set.type == "YELTLossSet"
+                        ):
+                            alert.warning(
+                                f"Encountered {loss_set.type} {loss_set.id}, skipping transformation"
+                            )
+                            loss_sets.append(loss_set)
+
+                        # Check if loss set is already processed
+                        elif loss_set.id in self.loss_set_mapping:
+                            loss_sets.append(
+                                analyzere.LossSet.retrieve(
+                                    self.loss_set_mapping[loss_set.id]
+                                )
+                            )
+
+                        # If unknown loss set, transform it.
+                        else:
+                            transformed = self.transform_loss_set(loss_set)
+                            if transformed:
+                                self.loss_set_mapping[
+                                    loss_set.id
+                                ] = transformed.id
+                                loss_sets.append(transformed)
+
+                    layer.loss_sets = loss_sets
+            except Exception as e:
+                alert.exception(f"Unable to process layer: {e}")
+        return layer
+
+    def process_layer(self, layer_uuid):
+        try:
+            input_layer = analyzere.LayerView.retrieve(layer_uuid)
+            if input_layer:
+                old_layer_view = input_layer
+
+                # Update LayerView and compute EL of original and modified LayerView
+                new_layer_view = analyzere.LayerView(
+                    analysis_profile=input_layer.analysis_profile,
+                    layer=self.modify_layer(input_layer),
+                ).save()
+
+                # Compute share-applied EL by creating a temporary PortfolioView
+                new_portfolio_view = analyzere.PortfolioView(
+                    analysis_profile=input_layer.analysis_profile,
+                    layer_views=[new_layer_view],
+                ).save()
+
+                old_portfolio_view = analyzere.PortfolioView(
+                    analysis_profile=input_layer.analysis_profile,
+                    layer_views=[old_layer_view],
+                ).save()
+
+        except Exception as e:
+            alert.exception(
+                f"Exception occurred while modifying Layer {layer_uuid}: {e}"
+            )
+        else:
+            return (
+                old_layer_view.id,
+                old_layer_view.el(),
+                old_portfolio_view.el(),
+                new_layer_view.id,
+                new_layer_view.el(),
+                new_portfolio_view.el(),
+            )
+
+    def display_links(self):
+        output_file_path = f"{self.output_dir}/results.csv"
+        print()
+        display(
+            FileLink(
+                output_file_path,
+                result_html_prefix="Click on the link to download the results: ",
+            )
+        )
+
+    def write_results(self, results):
+        column_names = [
+            "Old LayerView UUID",
+            "Old LayerView EL (100%)",
+            "Old LayerView EL (Share Applied)",
+            "New LayerView UUID",
+            "New LayerView EL (100%)",
+            "New LayerView EL (Share Applied)",
+        ]
+        results = write_output_file(
+            results, column_names, "results.csv", self.output_dir
+        )
+        alert.info(
+            f"Duplication successful!",
+            success=True,
+        )
+        self.display_links()
+
+    def modify_layer_loss_data(self):
+        self.extract_layers()
+
+        alert.info(f"Processing {len(self.layer_list)} Layers")
+        with ThreadPoolExecutor(multiprocessing.cpu_count()) as executor:
+            results = list(executor.map(self.process_layer, self.layer_list))
+
+        self.write_results(results)
