@@ -1,0 +1,26 @@
+[tool.poetry]
+name = "event-response-tool"
+version = "0.1.0"
+description = ""
+authors = ["Analyze Re Developers"]
+
+
+[tool.poetry.dependencies]
+python = "^3.8"
+analyzere = "^0.6.0"
+pandas = "^1.4.4"
+black = {extras = ["jupyter"], version = "^23.10.1"}
+pytz = "^2023.3"
+jupyter = "^1.0.0"
+
+
+[tool.poetry.dev-dependencies]
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+
+[tool.black]
+line-length = 78
