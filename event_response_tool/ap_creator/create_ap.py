@@ -116,7 +116,7 @@ class AnalysisProfileCreator:
 
         for event_id, trial_count in zip(events, trial_count_by_event):
             if event_id < self.total_num_of_events:
-                for sample in range(0, trial_count):
+                for _ in range(0, trial_count):
                     simulation_data += "%s,%s,%s\n" % (trial_id, event_id, 1)
                     trial_id += 1
 
@@ -141,7 +141,7 @@ class AnalysisProfileCreator:
                 type="AnyOfFilter",
                 name="Event %s" % (i),
                 description="Event %s" % (i),
-                attribute="Sequence",
+                attribute="EventId",
                 values=[i],
             ).save()
             for i in range(1, self.total_num_of_events + 1)
@@ -235,3 +235,9 @@ class AnalysisProfileCreator:
                 alert.error(
                     f"Analysis Profile {analysis_profile.id} was created, but failed while processing. {analysis_profile.status_message}"
                 )
+
+    def build_analysis_profile(self):
+        if self.old_analysis_profile_uuid:
+            self.update_analysis_profile()
+        else:
+            self.create_analysis_profile()

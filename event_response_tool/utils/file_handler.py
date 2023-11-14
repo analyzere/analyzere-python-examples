@@ -2,6 +2,7 @@ import os
 import logging
 import pandas as pd
 import io
+import re
 
 from utils.alert import Alert as alert
 
@@ -9,7 +10,7 @@ logger = logging.getLogger()
 
 
 def file_exists(file_path):
-    if file_path is not None:
+    if file_path is not None and len(str(file_path)) > 0:
         try:
             if not os.path.isfile(file_path):
                 raise FileNotFoundError(f"{file_path}")
@@ -43,11 +44,11 @@ def read_byte_stream_into_csv(byte_stream):
         return input_file_df
 
 
-def find_column(keywords, column_names):
-    for keyword in keywords:
-        for column_name in column_names:
-            if keyword in column_name:
-                return column_name
+def find_column(keyword, column_names):
+    keyword_regex = re.compile(r"{}".format(keyword), re.IGNORECASE)
+    for column_name in column_names:
+        if keyword_regex.findall(column_name):
+            return column_name
 
 
 def write_output_file(output_data, column_names_list, file_name, file_path):

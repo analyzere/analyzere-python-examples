@@ -1,5 +1,4 @@
 import os
-import warnings
 import logging
 import logging.config
 import shutil
@@ -56,10 +55,7 @@ class EventResponseHandler:
                 analysis_profile_description=self.event_response_inputs.analysis_profile_description,
                 old_analysis_profile_uuid=self.event_response_inputs.old_analysis_profile_uuid,
             )
-            if self.event_response_inputs.old_analysis_profile_uuid:
-                ap_creator.update_analysis_profile()
-            else:
-                ap_creator.create_analysis_profile()
+            ap_creator.build_analysis_profile()
 
 
 # Set up logging
@@ -89,18 +85,6 @@ def init_directories():
         return full_output_dir
 
 
-def check_empty_credentials(url, user_name, password):
-    updated_url = url if url else config.get("server", "base_url")
-    updated_username = (
-        user_name if user_name else config.get("server", "username")
-    )
-    updated_password = (
-        password if password else config.get("server", "password")
-    )
-
-    return updated_url, updated_username, updated_password
-
-
 def login(url, username, password):
     try:
         analyzere.base_url = url
@@ -115,7 +99,23 @@ def login(url, username, password):
 
 
 def validate_inputs(event_response_inputs):
-    # Check for required input
+    # Check for required inputs
+    if (
+        event_response_inputs.analyzere_url is None
+        or len(event_response_inputs.analyzere_url) == 0
+    ):
+        alert.error("Please input AnalyzeRe URL")
+    if (
+        event_response_inputs.analyzere_username is None
+        or len(event_response_inputs.analyzere_username) == 0
+    ):
+        alert.error("Please input AnalyzeRe username")
+    if (
+        event_response_inputs.analyzere_password is None
+        or len(event_response_inputs.analyzere_password) == 0
+    ):
+        alert.error("Please input AnalyzeRe password")
+
     if (
         event_response_inputs.event_weights_csv is None
         or len(event_response_inputs.event_weights_csv) == 0
@@ -135,7 +135,7 @@ def validate_inputs(event_response_inputs):
     ):
         if (
             (event_response_inputs.total_number_of_events is None)
-            or (event_response_inputs.trial_count is None)
+            and (event_response_inputs.trial_count is None)
             and (
                 event_response_inputs.old_analysis_profile_uuid is None
                 or len(event_response_inputs.old_analysis_profile_uuid) == 0
@@ -190,29 +190,28 @@ def process(event_response_inputs):
     #     layer_views_csv - The CSV containing list of layer_views UUID
     #     portfolio_view_uuid - The UUID of the portfolio_view (from where layer_views can be retrieved)
     #     total_number_of_events - The total number of events to be created in the event response analysis profile
-    #     trial_count - The maximum number of trial per event
+    #     trial_count - The maximum number of trials per event
     #     catalog_description - The description of the new event catalog to be created
     #     simulation_description - The description of the new simgrid to be created
     #     analysis_profile_description - The description of the new analysis profile to be created
     #     old_analysis_profile_uuid - The UUID of the analysis profile to be updated with a new simgrid
 
-    warnings.filterwarnings("ignore")
+    # warnings.filterwarnings("ignore")
     init_logging()
     output_dir = init_directories()
 
     # Validate inputs
-    validate_inputs(event_response_inputs)
     event_response_inputs = check_and_set_optional_inputs(
         event_response_inputs
     )
+    validate_inputs(event_response_inputs)
 
     # Check if the input files exist
     for input_file in [
         event_response_inputs.event_weights_csv,
         event_response_inputs.layer_views_csv,
     ]:
-        if input_file and len(str(input_file)) > 0:
-            file_exists(input_file)
+        file_exists(input_file)
 
     login(
         event_response_inputs.analyzere_url,
@@ -258,7 +257,7 @@ def construct_argument_parser():
         help="The total number of events to be created in the event response analysis profile",
     )
     parser.add_argument(
-        "--trial_count", help="The maximum number of trial per event"
+        "--trial_count", help="The maximum number of trials per event"
     )
     parser.add_argument(
         "--catalog_description",

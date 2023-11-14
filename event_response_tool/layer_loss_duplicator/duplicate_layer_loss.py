@@ -42,7 +42,10 @@ class LayerLossDuplicator:
         self.loss_set_mapping = {}  # Old LossSet UUID : New LossSet UUID
 
     def extract_layers(self):
-        if not self.layer_ids_csv is None and len(str(self.layer_ids_csv)) > 0:
+        if (
+            not self.layer_ids_csv is None
+            and len(str(self.layer_ids_csv)) > 0
+        ):
             # get the list of LayerViews from the input CSV
             layer_list_df = read_input_file(self.layer_ids_csv)
             layer_column = find_column(
@@ -89,15 +92,21 @@ class LayerLossDuplicator:
     def scale_elt(self, elt_df, loss_set):
         alert.debug(f"Scaling loss_set {loss_set.id}")
         # Normalize the EventId column
-        event_id_column = find_column("event", elt_df.columns.tolist())
+        event_id_column_in_elt = find_column("event", elt_df.columns.tolist())
+        event_id_column_in_weights = find_column(
+            "event", self.event_weights_df.columns.tolist()
+        )
         self.event_weights_df = self.event_weights_df.rename(
-            columns={self.event_weights_df.columns[0]: event_id_column}
+            columns={event_id_column_in_weights: event_id_column_in_elt}
         )
 
         # Perform left-join of weights table and loss set table.
         # Only events that occur in the weights table will remain.
         weighted_elt_df = join(
-            self.event_weights_df, elt_df, how="left", on=event_id_column
+            self.event_weights_df,
+            elt_df,
+            how="left",
+            on=event_id_column_in_elt,
         )
         weighted_elt_df = weighted_elt_df.rename(
             mapper=lambda name: name.upper(), axis=1
@@ -155,7 +164,7 @@ class LayerLossDuplicator:
                 weighted_elt_df["EVENTID"] = 1
         except Exception as e:
             alert.exception(
-                f"Exception occured while scaling Loss Set: {loss_set.id}"
+                f"Exception occured while scaling Loss Set {loss_set.id}: {e}"
             )
         else:
             return weighted_elt_df
@@ -221,53 +230,38 @@ class LayerLossDuplicator:
                 # no losses to process
                 if len(layer.loss_sets) == 0 and layer.type != "FilterLayer":
                     pass
-                # Need to replace Filter Layers with unlimited Generic layer
-                elif layer.type == "FilterLayer":
-                    # Transform any loss sets that the Filter Layer may have
-                    loss_sets = []
 
-                    for loss_set in layer.loss_sets:
+                # Transform the loss sets in the loss set list in-place
+                loss_sets = []
+
+                for _, loss_set in enumerate(layer.loss_sets):
+                    # Check if loss set is already processed
+                    if loss_set.id in self.loss_set_mapping:
+                        loss_sets.append(
+                            analyzere.LossSet.retrieve(
+                                self.loss_set_mapping[loss_set.id]
+                            )
+                        )
+                    # Transform only ELTs
+                    elif loss_set.type == "ELTLossSet":
                         transformed = self.transform_loss_set(loss_set)
                         if transformed:
-                            # Add transformed loss set to cache
                             self.loss_set_mapping[
                                 loss_set.id
                             ] = transformed.id
                             loss_sets.append(transformed)
 
+                    # If unknown loss set, skip it.
+                    else:
+                        alert.warning(
+                            f"Encountered {loss_set.type} {loss_set.id}, skipping transformation"
+                        )
+                        loss_sets.append(loss_set)
+
+                # Need to replace Filter Layers with unlimited Generic layer
+                if layer.type == "FilterLayer":
                     layer = self.replace_filter_layer(loss_sets)
                 else:
-                    # Transform the loss sets in the loss set list in-place
-                    loss_sets = []
-
-                    for index, loss_set in enumerate(layer.loss_sets):
-                        # Skip YELTs and parametric loss sets
-                        if (
-                            loss_set.type == "ParametricLossSet"
-                            or loss_set.type == "YELTLossSet"
-                        ):
-                            alert.warning(
-                                f"Encountered {loss_set.type} {loss_set.id}, skipping transformation"
-                            )
-                            loss_sets.append(loss_set)
-
-                        # Check if loss set is already processed
-                        elif loss_set.id in self.loss_set_mapping:
-                            loss_sets.append(
-                                analyzere.LossSet.retrieve(
-                                    self.loss_set_mapping[loss_set.id]
-                                )
-                            )
-
-                        # If unknown loss set, transform it.
-                        else:
-                            transformed = self.transform_loss_set(loss_set)
-                            if transformed:
-                                self.loss_set_mapping[
-                                    loss_set.id
-                                ] = transformed.id
-                                loss_sets.append(transformed)
-
                     layer.loss_sets = loss_sets
             except Exception as e:
                 alert.exception(f"Unable to process layer: {e}")
@@ -279,13 +273,14 @@ class LayerLossDuplicator:
             if input_layer:
                 old_layer_view = input_layer
 
-                # Update LayerView and compute EL of original and modified LayerView
+                # Update LayerView
                 new_layer_view = analyzere.LayerView(
                     analysis_profile=input_layer.analysis_profile,
                     layer=self.modify_layer(input_layer),
                 ).save()
 
-                # Compute share-applied EL by creating a temporary PortfolioView
+                # Create PortfolioViews for aiding the computation of
+                # share applied output metrics
                 new_portfolio_view = analyzere.PortfolioView(
                     analysis_profile=input_layer.analysis_profile,
                     layer_views=[new_layer_view],
