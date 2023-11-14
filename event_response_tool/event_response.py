@@ -133,12 +133,11 @@ def validate_inputs(event_response_inputs):
         event_response_inputs.portfolio_view_uuid is None
         or len(event_response_inputs.portfolio_view_uuid) == 0
     ):
-        if (
-            (event_response_inputs.total_number_of_events is None)
-            and (event_response_inputs.trial_count is None)
-            and (
-                event_response_inputs.old_analysis_profile_uuid is None
-                or len(event_response_inputs.old_analysis_profile_uuid) == 0
+        if not (
+            event_response_inputs.old_analysis_profile_uuid
+            or (
+                event_response_inputs.total_number_of_events
+                and event_response_inputs.trial_count
             )
         ):
             alert.error(
