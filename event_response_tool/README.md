@@ -6,8 +6,8 @@ The purpose of the Event Response Tool is to provide RMS style disaster response
 
 To aid this type of analysis, the tool supports the following two functionalities:
 
-**1. Creating and Updating specialized Event Response Analysis Profile**
-**2. Transforming existing LayerViews and underlying ELTs**
+1. Creating and Updating specialized Event Response Analysis Profile
+2. Transforming existing LayerViews and underlying ELTs
 
 #### Analysis Profile
 
