@@ -102,14 +102,15 @@ Note that we can also create a new Analysis Profile and use it for updating the 
 The complete list of arguments supported by command-line interface is as follows:
 ```shell
 usage: event_response.py [-h] [--url URL] [--username USERNAME] [--password PASSWORD] [--event_weights_csv EVENT_WEIGHTS_CSV] --method {mixture_distribution,convolution}
-                        [--old_analysis_profile_uuid OLD_ANALYSIS_PROFILE_UUID] [--max_trial_per_event MAX_TRIAL_PER_EVENT]
-                        [--simulation_description_mixture_distribution SIMULATION_DESCRIPTION_MIXTURE_DISTRIBUTION]
-                        [--analysis_profile_description_mixture_distribution ANALYSIS_PROFILE_DESCRIPTION_MIXTURE_DISTRIBUTION]
-                        [--simulation_start_date_mixture_distribution SIMULATION_START_DATE_MIXTURE_DISTRIBUTION] [--new_analysis_profile] [--no_new_analysis_profile]
-                        [--total_number_of_events TOTAL_NUMBER_OF_EVENTS] [--trial_count TRIAL_COUNT] [--catalog_description CATALOG_DESCRIPTION]
-                        [--simulation_description SIMULATION_DESCRIPTION] [--analysis_profile_description ANALYSIS_PROFILE_DESCRIPTION]
-                        [--simulation_start_date SIMULATION_START_DATE] [--layer_views_csv LAYER_VIEWS_CSV] [--portfolio_view_uuid PORTFOLIO_VIEW_UUID]
-                        [--analysis_profile_uuid_for_loss_update ANALYSIS_PROFILE_UUID_FOR_LOSS_UPDATE]
+                         [--old_analysis_profile_uuid OLD_ANALYSIS_PROFILE_UUID] [--max_trial_per_event MAX_TRIAL_PER_EVENT]
+                         [--mixture_distribution_simulation_description MIXTURE_DISTRIBUTION_SIMULATION_DESCRIPTION]
+                         [--mixture_distribution_analysis_profile_description MIXTURE_DISTRIBUTION_ANALYSIS_PROFILE_DESCRIPTION]
+                         [--mixture_distribution_simulation_start_date MIXTURE_DISTRIBUTION_SIMULATION_START_DATE] [--new_analysis_profile] [--no_new_analysis_profile]
+                         [--total_number_of_events TOTAL_NUMBER_OF_EVENTS] [--trial_count TRIAL_COUNT] [--convolution_catalog_description CONVOLUTION_CATALOG_DESCRIPTION]
+                         [--convolution_simulation_description CONVOLUTION_SIMULATION_DESCRIPTION]
+                         [--convolution_analysis_profile_description CONVOLUTION_ANALYSIS_PROFILE_DESCRIPTION]
+                         [--convolution_simulation_start_date CONVOLUTION_SIMULATION_START_DATE] [--layer_views_csv LAYER_VIEWS_CSV]
+                         [--portfolio_view_uuid PORTFOLIO_VIEW_UUID] [--analysis_profile_uuid_for_loss_update ANALYSIS_PROFILE_UUID_FOR_LOSS_UPDATE]
 ```
 
 ## Config file
