@@ -38,6 +38,7 @@ class LayerLossDuplicator:
         self.analysis_profile = self.retrieve_analysis_profile(
             analysis_profile_uuid
         )
+        self.event_catalogs = self.analysis_profile.event_catalogs
         self.layer_ids_csv = layer_ids_csv
         self.portfolio_uuid = portfolio_uuid
         self.config = config
@@ -198,7 +199,7 @@ class LayerLossDuplicator:
                 new_description,
                 scaled_df.to_csv(index=False),
                 loss_set.currency,
-                loss_set.event_catalogs,
+                self.event_catalogs,
             )
             return new_loss_set
 
@@ -287,24 +288,23 @@ class LayerLossDuplicator:
     def process_layer(self, layer_uuid):
         try:
             old_layer_view = analyzere.LayerView.retrieve(layer_uuid)
-            if old_layer_view:
-                # Update LayerView
-                new_layer_view = analyzere.LayerView(
-                    analysis_profile=self.analysis_profile,
-                    layer=self.modify_layer(old_layer_view),
-                ).save()
+            # Update LayerView
+            new_layer_view = analyzere.LayerView(
+                analysis_profile=self.analysis_profile,
+                layer=self.modify_layer(old_layer_view),
+            ).save()
 
-                # Create PortfolioViews for aiding the computation of
-                # share applied output metrics
-                new_portfolio_view = analyzere.PortfolioView(
-                    analysis_profile=self.analysis_profile,
-                    layer_views=[new_layer_view],
-                ).save()
+            # Create PortfolioViews for aiding the computation of
+            # share applied output metrics
+            new_portfolio_view = analyzere.PortfolioView(
+                analysis_profile=self.analysis_profile,
+                layer_views=[new_layer_view],
+            ).save()
 
-                old_portfolio_view = analyzere.PortfolioView(
-                    analysis_profile=old_layer_view.analysis_profile,
-                    layer_views=[old_layer_view],
-                ).save()
+            old_portfolio_view = analyzere.PortfolioView(
+                analysis_profile=old_layer_view.analysis_profile,
+                layer_views=[old_layer_view],
+            ).save()
 
         except Exception as e:
             alert.exception(

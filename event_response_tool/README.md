@@ -2,13 +2,13 @@
 
 ## Overview
 
-The Event Response Tool aids disaster response analysis by supporting two methods, viz., Mixture Distribution method and Convolution method.
+The Event Response Tool aids RMS style disaster response analysis by supporting two methods: Mixture Distribution method and Convolution method.
 
 ### Methodologies
 
 #### Mixture Distribution method
 
-The Mixture Distribution method aims to mimic the functionality of RMS Step Tool. In this method, the Simulation component of an existing Analysis Profile is updated with a weighted Simulation grid based on the individual weights of the events. All other components of the original Analysis Profile remains intact, and no modification is made to the structures (LayerViews) and Loss Sets.
+The Mixture Distribution method aims to mimic the functionality of RMS Step Tool. In this method, an existing Analysis Profile is duplicated by updating the Simulation component with a weighted Simulation grid based on the individual weights of the events. The other components of the original Analysis Profile, like Event Catalog, Loss Filters, and Exchange Rates are simply re-used in the new duplicated Analysis Profile. It is to be noted that no modification is made to the structures (LayerViews) and Loss Sets in this method. 
 
 #### Convolution method
 

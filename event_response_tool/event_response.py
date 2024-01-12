@@ -40,11 +40,11 @@ class EventResponseHandler:
             ap_creator = AnalysisProfileCreator(
                 config=config,
                 event_weights_df=self.event_weights_df,
-                simulation_description=self.event_response_inputs.simulation_description_mixture_distribution,
+                simulation_description=self.event_response_inputs.mixture_distribution_simulation_description,
                 old_analysis_profile_uuid=self.event_response_inputs.old_analysis_profile_uuid,
-                analysis_profile_description=self.event_response_inputs.analysis_profile_description_mixture_distribution,
+                analysis_profile_description=self.event_response_inputs.mixture_distribution_analysis_profile_description,
                 trial_count=self.event_response_inputs.max_trial_per_event,
-                simulation_start_date=self.event_response_inputs.simulation_start_date_mixture_distribution,
+                simulation_start_date=self.event_response_inputs.mixture_distribution_simulation_start_date,
             )
             ap_creator.update_analysis_profile()
 
@@ -57,12 +57,12 @@ class EventResponseHandler:
                 ap_creator = AnalysisProfileCreator(
                     config=config,
                     event_weights_df=None,
-                    catalog_description=self.event_response_inputs.catalog_description,
-                    simulation_description=self.event_response_inputs.simulation_description,
-                    analysis_profile_description=self.event_response_inputs.analysis_profile_description,
+                    catalog_description=self.event_response_inputs.convolution_catalog_description,
+                    simulation_description=self.event_response_inputs.convolution_simulation_description,
+                    analysis_profile_description=self.event_response_inputs.convolution_analysis_profile_description,
                     trial_count=self.event_response_inputs.trial_count,
                     total_num_of_events=self.event_response_inputs.total_number_of_events,
-                    simulation_start_date=self.event_response_inputs.simulation_start_date,
+                    simulation_start_date=self.event_response_inputs.convolution_simulation_start_date,
                 )
                 analysis_profile_uuid = ap_creator.create_analysis_profile()
 
@@ -128,36 +128,21 @@ def login(url, username, password):
 
 def validate_inputs(event_response_inputs):
     # Analyze Re server
-    if (
-        event_response_inputs.analyzere_url is None
-        or len(event_response_inputs.analyzere_url) == 0
-    ):
+    if not event_response_inputs.analyzere_url:
         alert.error("Please input AnalyzeRe URL")
-    if (
-        event_response_inputs.analyzere_username is None
-        or len(event_response_inputs.analyzere_username) == 0
-    ):
+    if not event_response_inputs.analyzere_username:
         alert.error("Please input AnalyzeRe username")
-    if (
-        event_response_inputs.analyzere_password is None
-        or len(event_response_inputs.analyzere_password) == 0
-    ):
+    if not event_response_inputs.analyzere_password:
         alert.error("Please input AnalyzeRe password")
 
     # METHOD 1 - MIXTURE DISTRIBUTION METHOD
     if event_response_inputs.mixture_distribution_method:
         # Event weights CSV - required for creating weighted simgrid
-        if (
-            event_response_inputs.event_weights_csv is None
-            or len(event_response_inputs.event_weights_csv) == 0
-        ):
+        if not event_response_inputs.event_weights_csv:
             alert.error(
                 "Please input the path of the CSV containing event weights"
             )
-        if (
-            event_response_inputs.old_analysis_profile_uuid is None
-            or len(event_response_inputs.old_analysis_profile_uuid) == 0
-        ):
+        if not event_response_inputs.old_analysis_profile_uuid:
             alert.error(
                 "Please provide the existing Analysis Profile UUID in 'old_analysis_profile_uuid' field for Mixture Distribution method"
             )
@@ -173,10 +158,8 @@ def validate_inputs(event_response_inputs):
         # If new Analysis Profile is to be created, check if trial count and
         # and total number of events to be included in the catalog are provided
         if event_response_inputs.create_analysis_profile:
-            if not (
-                event_response_inputs.total_number_of_events
-                and event_response_inputs.trial_count
-            ):
+            if not(event_response_inputs.total_number_of_events 
+                   and event_response_inputs.trial_count):
                 alert.error(
                     "Please provide the total number of events and the trial count for creating a new Analysis Profile using the convolution method"
                 )
@@ -184,44 +167,24 @@ def validate_inputs(event_response_inputs):
         # If new Analysis Profile need not be created, check if
         # an existing Analysis Profile UUID is provided
         if not event_response_inputs.create_analysis_profile:
-            # Event weights CSV - required for updating LossSets
-            if (
-                event_response_inputs.event_weights_csv is None
-                or len(event_response_inputs.event_weights_csv) == 0
-            ):
-                alert.error(
-                    "Please input the path of the CSV containing event weights"
-                )
-            if (
-                event_response_inputs.analysis_profile_uuid_for_loss_update
-                is None
-                or len(
-                    event_response_inputs.analysis_profile_uuid_for_loss_update
-                )
-                == 0
-            ):
+            if not event_response_inputs.analysis_profile_uuid_for_loss_update:
                 alert.error(
                     "Please provide the existing Analysis Profile UUID for updating the LayerViews and LossSets or create a new Analysis Profile"
                 )
 
             # If an existing Analysis Profile UUID is provided, check if layer_views_csv or portfolio_view_uuid is provided
-            if (
-                len(
-                    event_response_inputs.analysis_profile_uuid_for_loss_update
-                )
-                > 0
-            ):
-                if (
-                    event_response_inputs.layer_views_csv is None
-                    or len(event_response_inputs.layer_views_csv) == 0
-                ) and (
-                    event_response_inputs.portfolio_view_uuid is None
-                    or len(event_response_inputs.portfolio_view_uuid) == 0
-                ):
+            if event_response_inputs.analysis_profile_uuid_for_loss_update:
+                if not (event_response_inputs.layer_views_csv or 
+                        event_response_inputs.portfolio_view_uuid):
                     alert.error(
                         "Please input either layer_views_csv or portfolio_view_uuid for processing the LayerViews and LossSets"
                     )
-
+            
+            # Event weights CSV - required for updating LossSets
+            if not event_response_inputs.event_weights_csv:
+                alert.error(
+                    "Please input the path of the CSV containing event weights"
+                )
 
 def check_and_set_optional_inputs(event_response_inputs):
     event_response_inputs.analyzere_url = (
@@ -239,66 +202,55 @@ def check_and_set_optional_inputs(event_response_inputs):
         if event_response_inputs.analyzere_password
         else config.get("server", "password")
     )
-    event_response_inputs.catalog_description = (
-        event_response_inputs.catalog_description
-        if event_response_inputs.catalog_description
+    event_response_inputs.convolution_catalog_description = (
+        event_response_inputs.convolution_catalog_description
+        if event_response_inputs.convolution_catalog_description
         else config.get("ap_creator", "default_catalog_name")
     )
-    event_response_inputs.simulation_description = (
-        event_response_inputs.simulation_description
-        if event_response_inputs.simulation_description
+    event_response_inputs.convolution_simulation_description = (
+        event_response_inputs.convolution_simulation_description
+        if event_response_inputs.convolution_simulation_description
         else config.get("ap_creator", "default_simulation_name")
     )
-    event_response_inputs.analysis_profile_description = (
-        event_response_inputs.analysis_profile_description
-        if event_response_inputs.analysis_profile_description
+    event_response_inputs.convolution_analysis_profile_description = (
+        event_response_inputs.convolution_analysis_profile_description
+        if event_response_inputs.convolution_analysis_profile_description
         else config.get("ap_creator", "default_analysis_profile_name")
     )
-    event_response_inputs.simulation_description_mixture_distribution = (
-        event_response_inputs.simulation_description_mixture_distribution
-        if event_response_inputs.simulation_description_mixture_distribution
+    event_response_inputs.mixture_distribution_simulation_description = (
+        event_response_inputs.mixture_distribution_simulation_description
+        if event_response_inputs.mixture_distribution_simulation_description
         else config.get("ap_creator", "default_simulation_name")
     )
-    event_response_inputs.analysis_profile_description_mixture_distribution = (
-        event_response_inputs.analysis_profile_description_mixture_distribution
-        if event_response_inputs.analysis_profile_description_mixture_distribution
+    event_response_inputs.mixture_distribution_analysis_profile_description = (
+        event_response_inputs.mixture_distribution_analysis_profile_description
+        if event_response_inputs.mixture_distribution_analysis_profile_description
         else config.get("ap_creator", "default_analysis_profile_name")
     )
-    if (
-        event_response_inputs.simulation_start_date_mixture_distribution
-        and len(
-            event_response_inputs.simulation_start_date_mixture_distribution
-        )
-        > 0
-    ):
+    if event_response_inputs.mixture_distribution_simulation_start_date:
         try:
-            event_response_inputs.simulation_start_date_mixture_distribution = datetime.strptime(
-                event_response_inputs.simulation_start_date_mixture_distribution,
+            event_response_inputs.mixture_distribution_simulation_start_date = datetime.strptime(
+                event_response_inputs.mixture_distribution_simulation_start_date,
                 "%Y-%m-%d",
             )
         except Exception as e:
             alert.error(
-                "Unable to convert simulation_start_date_mixture_distribution to valid datetime object, provide date in 'yyyy-mm-dd' format: {e}"
+                "Unable to convert mixture_distribution_simulation_start_date to valid datetime object, provide date in 'yyyy-mm-dd' format: {e}"
             )
     else:
-        event_response_inputs.simulation_start_date_mixture_distribution = (
-            None
-        )
+        event_response_inputs.mixture_distribution_simulation_start_date = None 
 
-    if (
-        event_response_inputs.simulation_start_date
-        and len(event_response_inputs.simulation_start_date) > 0
-    ):
+    if event_response_inputs.convolution_simulation_start_date:
         try:
-            event_response_inputs.simulation_start_date = datetime.strptime(
-                event_response_inputs.simulation_start_date, "%Y-%m-%d"
+            event_response_inputs.convolution_simulation_start_date = datetime.strptime(
+                event_response_inputs.convolution_simulation_start_date, "%Y-%m-%d"
             )
         except Exception as e:
             alert.error(
-                "Unable to convert simulation_start_date to valid datetime object, provide date in 'yyyy-mm-dd' format: {e}"
+                "Unable to convert convolution_simulation_start_date to valid datetime object, provide date in 'yyyy-mm-dd' format: {e}"
             )
     else:
-        event_response_inputs.simulation_start_date = datetime(
+        event_response_inputs.convolution_simulation_start_date = datetime(
             datetime.now().year, 1, 1, tzinfo=pytz.utc
         )
 
@@ -314,16 +266,16 @@ def process(event_response_inputs):
     #     mixture_distribution_method - Flag to toggle between Mixture Distribution and Convolution
     #     old_analysis_profile_uuid - UUID of the existing Analysis Profile that needs to be updated using mixture distribution
     #     max_trial_per_event - Maximum trial per event in the new Simulation grid
-    #     simulation_description_mixture_distribution - Description of the new Simulation grid
-    #     simulation_start_date_mixture_distribution - Start Date of the new Simulation grid
-    #     analysis_profile_description_mixture_distribution - Description of the new Analysis Profile
+    #     mixture_distribution_simulation_description - Description of the new Simulation grid
+    #     mixture_distribution_simulation_start_date - Start Date of the new Simulation grid
+    #     mixture_distribution_analysis_profile_description - Description of the new Analysis Profile
     #     create_analysis_profile - Flag to decide if a new Analysis Profile is to be created using Convolution method
     #     total_number_of_events - Total number of events to be created in the Event Catalog
     #     trial_count - Trial count per event for Simulation created using Convolution method
-    #     catalog_description - Description of the new Catalog
-    #     simulation_description - Description of the new Simulation
-    #     analysis_profile_description - Description of the new Analysis Profile
-    #     simulation_start_date - Start date of the new Simulation
+    #     convolution_catalog_description - Description of the new Catalog
+    #     convolution_simulation_description - Description of the new Simulation
+    #     convolution_analysis_profile_description - Description of the new Analysis Profile
+    #     convolution_simulation_start_date - Start date of the new Simulation
     #     layer_views_csv - The CSV containing list of layer_views UUID
     #     portfolio_view_uuid - The UUID of the portfolio_view (from where layer_views can be retrieved)
     #     analysis_profile_uuid_for_loss_update - The UUID of the existing Analysis Profile to be used for updating LayerViews and LossSets
@@ -391,15 +343,15 @@ def construct_argument_parser():
         type=int,
     )
     parser.add_argument(
-        "--simulation_description_mixture_distribution",
+        "--mixture_distribution_simulation_description",
         help="Description of the new Simulation grid to be created, if not provided, the default value from config file is used",
     )
     parser.add_argument(
-        "--analysis_profile_description_mixture_distribution",
+        "--mixture_distribution_analysis_profile_description",
         help="Description of the new Analysis Profile to be created, if not provided, the default value from config file is used",
     )
     parser.add_argument(
-        "--simulation_start_date_mixture_distribution",
+        "--mixture_distribution_simulation_start_date",
         help="Start date of the Simulation, if not provided, the date defaults to original Simgrid start date",
     )
 
@@ -429,19 +381,19 @@ def construct_argument_parser():
         type=int,
     )
     parser.add_argument(
-        "--catalog_description",
+        "--convolution_catalog_description",
         help="Description of the new Event Catalog to be created, if not provided, the default value from config file is used",
     )
     parser.add_argument(
-        "--simulation_description",
+        "--convolution_simulation_description",
         help="Description of the new Simulation grid to be created, if not provided, the default value from config file is used",
     )
     parser.add_argument(
-        "--analysis_profile_description",
+        "--convolution_analysis_profile_description",
         help="Description of the new Analysis Profile to be created, if not provided, the default value from config file is used",
     )
     parser.add_argument(
-        "--simulation_start_date",
+        "--convolution_simulation_start_date",
         help="Start date of the Simulation, if not provided, the date defaults to the first day of the current year",
     )
 
@@ -485,30 +437,24 @@ if __name__ == "__main__":
     # Method 1 - Mixture Distribution
     old_analysis_profile_uuid = args.old_analysis_profile_uuid
     max_trial_per_event = args.max_trial_per_event
-    simulation_description_mixture_distribution = (
-        args.simulation_description_mixture_distribution
-    )
-    analysis_profile_description_mixture_distribution = (
-        args.analysis_profile_description_mixture_distribution
-    )
-    simulation_start_date_mixture_distribution = (
-        args.analysis_profile_description_mixture_distribution
-    )
+    mixture_distribution_simulation_description = args.mixture_distribution_simulation_description
+    mixture_distribution_analysis_profile_description = args.mixture_distribution_analysis_profile_description
+    mixture_distribution_simulation_start_date = args.mixture_distribution_simulation_start_date
+  
 
     # Method 2 - Convolution
     create_analysis_profile = args.create_analysis_profile
     total_number_of_events = args.total_number_of_events
     trial_count = args.trial_count
-    catalog_description = args.catalog_description
-    simulation_description = args.simulation_description
-    analysis_profile_description = args.analysis_profile_description
-    simulation_start_date = args.simulation_start_date
+    convolution_catalog_description = args.convolution_catalog_description
+    convolution_simulation_description = args.convolution_simulation_description
+    convolution_analysis_profile_description = args.convolution_analysis_profile_description
+    convolution_simulation_start_date = args.convolution_simulation_start_date
 
     layer_views_csv = args.layer_views_csv
     portfolio_view_uuid = args.portfolio_view_uuid
-    analysis_profile_uuid_for_loss_update = (
-        args.analysis_profile_uuid_for_loss_update
-    )
+    analysis_profile_uuid_for_loss_update = args.analysis_profile_uuid_for_loss_update
+
 
     event_response_inputs = SimpleNamespace(
         analyzere_url=url,
@@ -518,16 +464,16 @@ if __name__ == "__main__":
         mixture_distribution_method=mixture_distribution_method,
         old_analysis_profile_uuid=old_analysis_profile_uuid,
         max_trial_per_event=max_trial_per_event,
-        simulation_description_mixture_distribution=simulation_description_mixture_distribution,
-        analysis_profile_description_mixture_distribution=analysis_profile_description_mixture_distribution,
-        simulation_start_date_mixture_distribution=simulation_start_date_mixture_distribution,
+        mixture_distribution_simulation_description=mixture_distribution_simulation_description,
+        mixture_distribution_analysis_profile_description=mixture_distribution_analysis_profile_description,
+        mixture_distribution_simulation_start_date=mixture_distribution_simulation_start_date,
         create_analysis_profile=create_analysis_profile,
         total_number_of_events=total_number_of_events,
         trial_count=trial_count,
-        catalog_description=catalog_description,
-        simulation_description=simulation_description,
-        analysis_profile_description=analysis_profile_description,
-        simulation_start_date=simulation_start_date,
+        convolution_catalog_description=convolution_catalog_description,
+        convolution_simulation_description=convolution_simulation_description,
+        convolution_analysis_profile_description=convolution_analysis_profile_description,
+        convolution_simulation_start_date=convolution_simulation_start_date,
         layer_views_csv=layer_views_csv,
         portfolio_view_uuid=portfolio_view_uuid,
         analysis_profile_uuid_for_loss_update=analysis_profile_uuid_for_loss_update,
