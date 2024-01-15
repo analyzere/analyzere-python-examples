@@ -17,23 +17,23 @@ class AnalysisProfileCreator:
         self,
         config,
         event_weights_df,
-        total_num_of_events,
-        trial_count,
-        catalog_description,
-        simulation_description,
-        analysis_profile_description,
-        old_analysis_profile_uuid,
+        total_num_of_events=0,
+        trial_count=0,
+        catalog_description=None,
+        simulation_description=None,
+        analysis_profile_description=None,
+        old_analysis_profile_uuid=None,
+        simulation_start_date=None,
     ):
         self.config = config
         self.event_weights_df = event_weights_df
-        self.total_num_of_events = (
-            int(total_num_of_events) if total_num_of_events else 0
-        )
-        self.trial_count = int(trial_count) if trial_count else 0
+        self.total_num_of_events = total_num_of_events
+        self.trial_count = trial_count
         self.catalog_description = catalog_description
         self.simulation_description = simulation_description
         self.analysis_profile_description = analysis_profile_description
         self.old_analysis_profile_uuid = old_analysis_profile_uuid
+        self.simulation_start_date = simulation_start_date
 
     def create_catalog(self):
         events_data = "\n".join(
@@ -97,17 +97,18 @@ class AnalysisProfileCreator:
                 )
             return simulation
 
-    def build_simulation_data(self):
-        alert.debug("Building simulation data")
+    def build_weighted_simulation_data(self):
+        alert.debug("Building weighted simulation data")
+
         event_column = find_column(
             "event", self.event_weights_df.columns.tolist()
         )
         weight_column = find_column(
             "weight", self.event_weights_df.columns.tolist()
         )
-
         events = self.event_weights_df[event_column].to_list()
         weights = self.event_weights_df[weight_column].to_list()
+
         max_trials = self.trial_count
         trial_count_by_event = [ceil(max_trials * w) for w in weights]
         trial_id = 1
@@ -115,15 +116,40 @@ class AnalysisProfileCreator:
         simulation_data = """TrialId,EventId,Day\n"""
 
         for event_id, trial_count in zip(events, trial_count_by_event):
-            if event_id < self.total_num_of_events:
-                for _ in range(0, trial_count):
-                    simulation_data += "%s,%s,%s\n" % (trial_id, event_id, 1)
-                    trial_id += 1
+            for _ in range(0, trial_count):
+                simulation_data += "%s,%s,%s\n" % (trial_id, event_id, 1)
+                trial_id += 1
 
         return simulation_data, sum(trial_count_by_event)
 
-    def create_simulation(self, catalogs, start_date):
-        simulation_data, trial_count = self.build_simulation_data()
+    def build_simulation_data(self):
+        alert.debug("Building simulation data")
+
+        events = [i for i in range(1, self.total_num_of_events + 1)]
+        trial_id = 1
+
+        simulation_data = """TrialId,EventId,Day\n"""
+        max_trials = self.trial_count
+
+        for event_id in events:
+            for _ in range(0, max_trials):
+                simulation_data += "%s,%s,%s\n" % (trial_id, event_id, 1)
+                trial_id += 1
+
+        return simulation_data, trial_id
+
+    def create_simulation(self, catalogs, start_date, weighted=False):
+        simulation_data = None
+        trial_count = None
+
+        if weighted:
+            (
+                simulation_data,
+                trial_count,
+            ) = self.build_weighted_simulation_data()
+        else:
+            simulation_data, trial_count = self.build_simulation_data()
+
         alert.debug("Simulation data built successfully")
 
         simulation = self.upload_simulation(
@@ -184,7 +210,11 @@ class AnalysisProfileCreator:
             old_ap.description = self.analysis_profile_description
 
             new_simulation = self.create_simulation(
-                old_ap.event_catalogs, old_ap.simulation.start_date
+                old_ap.event_catalogs,
+                self.simulation_start_date
+                if self.simulation_start_date
+                else old_ap.simulation.start_date,
+                weighted=True,
             )
             old_ap.simulation = new_simulation
             new_ap = old_ap.save()
@@ -208,8 +238,9 @@ class AnalysisProfileCreator:
         # Create a new specialized Analysis Profile for event response
         try:
             catalog = self.create_catalog()
-            start_date = datetime(datetime.now().year, 1, 1, tzinfo=pytz.utc)
-            simulation = self.create_simulation([catalog], start_date)
+            simulation = self.create_simulation(
+                [catalog], self.simulation_start_date
+            )
 
             analysis_profile = analyzere.AnalysisProfile()
             analysis_profile.event_catalogs = [catalog]
@@ -231,13 +262,8 @@ class AnalysisProfileCreator:
                     f"Successfully created Analysis Profile {analysis_profile.id}",
                     success=True,
                 )
+                return analysis_profile.id
             else:
                 alert.error(
                     f"Analysis Profile {analysis_profile.id} was created, but failed while processing. {analysis_profile.status_message}"
                 )
-
-    def build_analysis_profile(self):
-        if self.old_analysis_profile_uuid:
-            self.update_analysis_profile()
-        else:
-            self.create_analysis_profile()

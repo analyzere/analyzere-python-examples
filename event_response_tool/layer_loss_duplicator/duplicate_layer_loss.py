@@ -29,17 +29,35 @@ class LayerLossDuplicator:
         output_dir,
         event_weights_df,
         config,
+        analysis_profile_uuid,
         layer_ids_csv=None,
         portfolio_uuid=None,
     ):
         self.output_dir = output_dir
         self.event_weights_df = event_weights_df
+        self.analysis_profile = self.retrieve_analysis_profile(
+            analysis_profile_uuid
+        )
+        self.event_catalogs = self.analysis_profile.event_catalogs
         self.layer_ids_csv = layer_ids_csv
         self.portfolio_uuid = portfolio_uuid
         self.config = config
 
         self.layer_list = []  # List of LayerViews
         self.loss_set_mapping = {}  # Old LossSet UUID : New LossSet UUID
+
+    def retrieve_analysis_profile(self, ap_uuid):
+        try:
+            analysis_profile = analyzere.AnalysisProfile.retrieve(ap_uuid)
+        except Exception as e:
+            alert.exception(
+                f"Exception occured while retrieving Analysis Profile {ap_uuid}: {e}"
+            )
+        else:
+            alert.info(
+                f"Using Analysis Profile {ap_uuid} for updating LayerViews and LossSets"
+            )
+            return analysis_profile
 
     def extract_layers(self):
         if (
@@ -176,12 +194,12 @@ class LayerLossDuplicator:
         # Scale and transform loss set data and save into string buffer
         scaled_df = self.scale_elt(elt_df, loss_set)
         if scaled_df is not None:
-            new_description = (f"ER__{loss_set.description}").replace(" ", "")
+            new_description = f"ER_{loss_set.description}"
             new_loss_set = self.upload_elt(
                 new_description,
                 scaled_df.to_csv(index=False),
                 loss_set.currency,
-                loss_set.event_catalogs,
+                self.event_catalogs,
             )
             return new_loss_set
 
@@ -269,27 +287,24 @@ class LayerLossDuplicator:
 
     def process_layer(self, layer_uuid):
         try:
-            input_layer = analyzere.LayerView.retrieve(layer_uuid)
-            if input_layer:
-                old_layer_view = input_layer
+            old_layer_view = analyzere.LayerView.retrieve(layer_uuid)
+            # Update LayerView
+            new_layer_view = analyzere.LayerView(
+                analysis_profile=self.analysis_profile,
+                layer=self.modify_layer(old_layer_view),
+            ).save()
 
-                # Update LayerView
-                new_layer_view = analyzere.LayerView(
-                    analysis_profile=input_layer.analysis_profile,
-                    layer=self.modify_layer(input_layer),
-                ).save()
+            # Create PortfolioViews for aiding the computation of
+            # share applied output metrics
+            new_portfolio_view = analyzere.PortfolioView(
+                analysis_profile=self.analysis_profile,
+                layer_views=[new_layer_view],
+            ).save()
 
-                # Create PortfolioViews for aiding the computation of
-                # share applied output metrics
-                new_portfolio_view = analyzere.PortfolioView(
-                    analysis_profile=input_layer.analysis_profile,
-                    layer_views=[new_layer_view],
-                ).save()
-
-                old_portfolio_view = analyzere.PortfolioView(
-                    analysis_profile=input_layer.analysis_profile,
-                    layer_views=[old_layer_view],
-                ).save()
+            old_portfolio_view = analyzere.PortfolioView(
+                analysis_profile=old_layer_view.analysis_profile,
+                layer_views=[old_layer_view],
+            ).save()
 
         except Exception as e:
             alert.exception(

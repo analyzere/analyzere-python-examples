@@ -2,36 +2,39 @@
 
 ## Overview
 
-The purpose of the Event Response Tool is to provide RMS style disaster response analysis in PRIME platform. It is based on the idea that the RMS users are provided with a list of events and associated weights that are meant for constructing a weighted convolution of event distribution into a single new event. For each event, the mean, standard deviation and exposure value attributes are then multiplied by their respective weight and then aggregated into a single event.
+The Event Response Tool aids RMS style disaster response analysis by supporting two methods: Mixture Distribution method and Convolution method.
 
-To aid this type of analysis, the tool supports the following two functionalities:
+### Methodologies
 
-1. Creating and Updating specialized Event Response Analysis Profile
-2. Transforming existing LayerViews and underlying ELTs
+#### Mixture Distribution method
 
-#### Analysis Profile
+The Mixture Distribution method aims to mimic the functionality of RMS Step Tool. In this method, an existing Analysis Profile is duplicated by updating the Simulation component with a weighted Simulation grid based on the individual weights of the events. The other components of the original Analysis Profile, like Event Catalog, Loss Filters, and Exchange Rates are simply re-used in the new duplicated Analysis Profile. It is to be noted that no modification is made to the structures (LayerViews) and Loss Sets in this method. 
 
-The tool creates a specialized analysis profile that has the following components:
+#### Convolution method
+
+In Convolution method, the user can create a new Analysis Profile with a dummy Event Catalog, and a dummy Simulation of N Trials or use an already created Analysis Profile (that was created using Convolution method) to update LayerViews and Loss Sets with new losses based on the indiviudal weights of the events. 
+
+##### Analysis Profile created using Convolution method
+
+The Analysis Profile created using Convolution method has the following components:
 
 - **Event Catalog**: A dummy event catalog with one or more EventIDs starting from 1.
 
-- **Simulation**: A simulation of size 'n' where n is the weighted sum of maximum trials per event.
+- **Simulation**: A simulation of N trials.
 
 - **Loss Filters**: A set of loss filters representing every individual event in the event catalog.
 
 - **Exchange Rates Profile**: If the default FX profile UUID is not configured in the `config/event_response_config.ini` file,
   the latest FX profile available on the server.
 
-The tool also supports updating the simulation component of an existing event response analysis profile when the RMS users receive updated event weights. The user has to be provide the UUID of the existing analysis profile to the tool in order to use this feature.
+##### Transforming LayerViews and underlying ELTs using Convolution method
 
-#### Transforming LayerViews and underlying ELTs
-
-When the user provide a CSV containing a list of LayerViews or a PortfolioView UUID to be manipulated, the tool performs the following operations:
+When the user provide a CSV containing a list of LayerViews or a PortfolioView UUID to be transformed, the tool performs the following operations:
 
 - Iterate the LayerViews and retrieve the underlying ELTs.
 - Filter the ELTs based on the EventIDs in the event weights CSV file.
-- Multiply the Mean, StdC, StdI and ExposureValue by the weight provided by RMS.
-- Change the EventID for each row to a single EventID in the event catalog.
+- Multiply the Mean, StdC, StdI and ExposureValue by the weight provided in the event weight CSV.
+- Change the EventID for each row to a single EventID in the event catalog (the tool converts all EventIDs to EventID 1).
 - Output a resultant CSV with a summary of old and new LayerView metrics.
 
 ## Setup
@@ -69,32 +72,48 @@ Once the notebook server is launched, navigate to `Event Response Tool.ipynb` to
 
 #### Command-line interface
 
-After setting up Poetry, the Event Response tool can be invoked from CLI by running the Python program `event_response.py`. For example,
+After setting up Poetry, the Event Response tool can be invoked from CLI by running the Python program `event_response.py`. Below are some of the examples for both the methodologies.
+
+**Mixture Distribution** 
+
+For updating an existing Analysis Profile with a new weighted Simulation grid, the command might look like this:
 
 ```shell
-   $ poetry run python event_response.py --event_weights_csv sample_data/test_event_weights.csv --portfolio_view_uuid 12345abcd-6789-abcd-efgh-ijklmnopqr
+poetry run python event_response.py --url https://client-api.analyzere.net --username <username> --password <password> --method mixture_distribution --event_weights_csv sample_data/weightV2.csv --old_analysis_profile_uuid d64c21b5-18a0-4c05-ba34-5e114474c01c --max_trial_per_event 12
 ```
 
-#### Input Arguments
+In the above command, parameters corresponding to Simualtion description and Analysis Profile description are not provided, so the default value in the config file will be used. 
 
-Depending on the type of operation to be performed, the tool may require different
-arguments. The list of supported arguments are as follows:
+**Convolution** 
 
-- `analyzere_url`: Analyze Re URL
-- `analyzere_username`: Analyze Re username
-- `analyzere_password`: Analyze Re password
-- `event_weights_csv`: The path of the CSV containing event weights **(required argument)**
-- `layer_views_csv`: The path of the CSV containing list of layer_view UUIDs to be transformed
-- `portfolio_view_uuid`: The UUID of the portfolio_view to be transformed
-- `total_number_of_events`: The total number of events to be created in the event catalog of event response analysis profile
-- `trial_count`: The maximum number of trials per event
-- `catalog_description`: The description of the new event catalog to be created
-- `simulation_description`: - The description of the new simgrid to be created
-- `analysis_profile_description`: The description of the new analysis profile to be created
-- `old_analysis_profile_uuid`: The UUID of the analysis profile to be updated with a new simgrid
+To create a new Analysis Profile with dummy events, and dummy simulation of N trials, the commands could be configured like shown below.
 
-The above inputs are common to both the notebook and command-line interfaces. Note that each argument is to be prefixed with a `--` for the CLI.
+```shell
+poetry run python event_response.py --url https://client-api.analyzere.net --username <username> --password <password> --method convolution --new_analysis_profile --total_number_of_events 30 --trial_count 15 --analysis_profile_description test_convolution_ap
+```
 
+To update the LayerViews and LossSets with an already created Analysis Profile, the commands could be configured as,
+
+```shell
+poetry run python event_response.py --url https://client-api.analyzere.net --username <username> --password <password> --method convolution --no_new_analysis_profile --portfolio_view_uuid ffa44a3f-1ed1-eb74-a17b-0094cddde7c7 --analysis_profile_uuid_for_loss_update d0c263f1-34a5-4587-acd1-3644fbf376a8 --event_weights_csv sample_data/test_event_weights.csv
+```
+Note that we can also create a new Analysis Profile and use it for updating the LayerView/LossSet data by using `--new_analysis_profile` argument and then providing either `--portfolio_view_uuid` or `layer_views_csv` argument.
+
+The complete list of arguments supported by command-line interface is as follows:
+```shell
+usage: event_response.py [-h] [--url URL] [--username USERNAME] [--password PASSWORD] [--event_weights_csv EVENT_WEIGHTS_CSV] --method {mixture_distribution,convolution}
+                         [--old_analysis_profile_uuid OLD_ANALYSIS_PROFILE_UUID] [--max_trial_per_event MAX_TRIAL_PER_EVENT]
+                         [--mixture_distribution_simulation_description MIXTURE_DISTRIBUTION_SIMULATION_DESCRIPTION]
+                         [--mixture_distribution_analysis_profile_description MIXTURE_DISTRIBUTION_ANALYSIS_PROFILE_DESCRIPTION]
+                         [--mixture_distribution_simulation_start_date MIXTURE_DISTRIBUTION_SIMULATION_START_DATE] [--new_analysis_profile]
+                         [--total_number_of_events TOTAL_NUMBER_OF_EVENTS] [--trial_count TRIAL_COUNT] [--convolution_catalog_description CONVOLUTION_CATALOG_DESCRIPTION]
+                         [--convolution_simulation_description CONVOLUTION_SIMULATION_DESCRIPTION]
+                         [--convolution_analysis_profile_description CONVOLUTION_ANALYSIS_PROFILE_DESCRIPTION]
+                         [--convolution_simulation_start_date CONVOLUTION_SIMULATION_START_DATE] [--layer_views_csv LAYER_VIEWS_CSV]
+                         [--portfolio_view_uuid PORTFOLIO_VIEW_UUID] [--analysis_profile_uuid_for_loss_update ANALYSIS_PROFILE_UUID_FOR_LOSS_UPDATE]
+```
+
+## Config file
 The tool also supports a configuration file `config/event_response_config.ini` where some of the optional arguments can be configured.
 
 ## Data Requirements
