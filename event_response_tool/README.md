@@ -105,7 +105,7 @@ usage: event_response.py [-h] [--url URL] [--username USERNAME] [--password PASS
                          [--old_analysis_profile_uuid OLD_ANALYSIS_PROFILE_UUID] [--max_trial_per_event MAX_TRIAL_PER_EVENT]
                          [--mixture_distribution_simulation_description MIXTURE_DISTRIBUTION_SIMULATION_DESCRIPTION]
                          [--mixture_distribution_analysis_profile_description MIXTURE_DISTRIBUTION_ANALYSIS_PROFILE_DESCRIPTION]
-                         [--mixture_distribution_simulation_start_date MIXTURE_DISTRIBUTION_SIMULATION_START_DATE] [--new_analysis_profile] [--no_new_analysis_profile]
+                         [--mixture_distribution_simulation_start_date MIXTURE_DISTRIBUTION_SIMULATION_START_DATE] [--new_analysis_profile]
                          [--total_number_of_events TOTAL_NUMBER_OF_EVENTS] [--trial_count TRIAL_COUNT] [--convolution_catalog_description CONVOLUTION_CATALOG_DESCRIPTION]
                          [--convolution_simulation_description CONVOLUTION_SIMULATION_DESCRIPTION]
                          [--convolution_analysis_profile_description CONVOLUTION_ANALYSIS_PROFILE_DESCRIPTION]

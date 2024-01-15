@@ -363,12 +363,7 @@ def construct_argument_parser():
         dest="create_analysis_profile",
         action="store_true",
     )
-    parser.add_argument(
-        "--no_new_analysis_profile",
-        dest="create_analysis_profile",
-        action="store_false",
-    )
-    parser.set_defaults(create_analysis_profile=True)
+    parser.set_defaults(create_analysis_profile=False)
 
     parser.add_argument(
         "--total_number_of_events",
