@@ -138,15 +138,12 @@ class LayerLossDuplicator:
                     f"ELT {loss_set.id} without secondary uncertainty"
                 )
                 # Scale mean loss value
-                weighted_elt_df["LOSS"] = (
-                    weighted_elt_df.LOSS * weighted_elt_df.WEIGHT
-                )
+                scaled_loss = weighted_elt_df.LOSS * weighted_elt_df.WEIGHT
+                weighted_elt_df["LOSS"] = scaled_loss
                 weighted_elt_df["STDDEVC"] = 0
                 weighted_elt_df["STDDEVI"] = 0
                 # Set exposure value equal to the scaled loss
-                weighted_elt_df["EXPVALUE"] = (
-                    weighted_elt_df.LOSS * weighted_elt_df.WEIGHT
-                )
+                weighted_elt_df["EXPVALUE"] = scaled_loss
                 # Remove EventID and Weight columns
                 weighted_elt_df = weighted_elt_df.drop(
                     ["EVENTID", "WEIGHT"], axis=1
