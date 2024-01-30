@@ -114,8 +114,10 @@ class LayerLossDuplicator:
         event_id_column_in_weights = find_column(
             "event", self.event_weights_df.columns.tolist()
         )
+        weight_column = find_column("weight", self.event_weights_df.columns.tolist())
         self.event_weights_df = self.event_weights_df.rename(
-            columns={event_id_column_in_weights: event_id_column_in_elt}
+            columns={event_id_column_in_weights: event_id_column_in_elt,
+                     weight_column: "weight"}
         )
 
         # Perform left-join of weights table and loss set table.
